@@ -1,0 +1,95 @@
+@model IEnumerable<TodoListApp.WebApi.Models.Models.TodoTask.ModelTodoTask>
+
+@if (Model != null && Model.Any())
+{
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        @foreach (var task in Model)
+        {
+            bool isCompleted = task.Status.ToString() == "Completed";
+            bool isOverdue = task.DueDate < DateTime.Now && !isCompleted;
+            bool isNotStarted = task.Status.ToString() == "NotStarted";
+
+            string borderClass =
+            isCompleted ? "border-success" :
+            isOverdue ? "border-danger" :
+            isNotStarted ? "border-secondary" :
+            "border-warning";
+
+            <div class="col">
+                <div class="card h-100 shadow-sm border-3 @borderClass bg-dark text-light">
+                    <div class="card-body">
+                        <h5 class="card-title">@task.Title</h5>
+                        <p class="card-text text-muted">@task.Description</p>
+                        <small class="text-light d-block">
+                            <strong>Created:</strong> @task.CreateDate.ToShortDateString()
+                        </small>
+                        <small class="text-light d-block">
+                            <strong>Due:</strong> @task.DueDate.ToShortDateString()
+                        </small>
+
+                        @if (isCompleted)
+                        {
+                            <span class="badge bg-success mt-2">Completed</span>
+                        }
+                        else if (isOverdue)
+                        {
+                            <span class="badge bg-danger mt-2">Overdue</span>
+                        }
+                        else if (isNotStarted)
+                        {
+                            <span class="badge bg-secondary mt-2">Not Started</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-warning text-dark mt-2">In Progress</span>
+                        }
+
+                        <div class="mt-3">
+                            <a asp-action="Details" asp-controller="TodoTask" asp-route-id="@task.Id"
+                               class="btn btn-sm btn-outline-info me-1">
+                                <i class="bi bi-info-circle"></i> Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (ViewBag.TotalPages > 1)
+    {
+        <nav aria-label="Task pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+
+                <li class="page-item @(ViewBag.CurrentPage == 1 ? "disabled" : "")">
+                    <a class="page-link custom-dark"
+                       href="#" data-page="@(ViewBag.CurrentPage - 1)">
+                        &laquo;
+                    </a>
+                </li>
+
+                <li class="page-item">
+                    <a class="page-link custom-dark"
+                       href="#" data-page="@ViewBag.CurrentPage"
+                       style="background-color: #343a40 !important; color: #fff !important;">
+                        @ViewBag.CurrentPage
+                    </a>
+                </li>
+
+                <li class="page-item @(ViewBag.CurrentPage == ViewBag.TotalPages ? "disabled" : "")">
+                    <a class="page-link custom-dark"
+                       href="#" data-page="@(ViewBag.CurrentPage + 1)">
+                        &raquo;
+                    </a>
+                </li>
+
+            </ul>
+        </nav>
+    }
+}
+else
+{
+    <div class="alert alert-secondary text-center mt-4">
+        No tasks found for this tag.
+    </div>
+}

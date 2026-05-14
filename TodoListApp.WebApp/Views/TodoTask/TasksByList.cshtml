@@ -1,0 +1,126 @@
+@model IEnumerable<TodoListApp.WebApi.Models.Models.TodoTask.ModelTodoTask>
+
+@{
+    ViewData["Title"] = "Todo Tasks by List";
+}
+
+<h1 class="text-dark mb-4">Tasks in "@ViewBag.TodoListName"</h1>
+
+<p>
+    <a asp-action="Create" asp-route-todoListId="@ViewBag.TodoListId" class="btn btn-dark">
+        <i class="bi bi-plus-circle"></i> New Task
+    </a>
+    <a asp-action="Index" asp-controller="TodoList" class="btn btn-outline-secondary">
+        Back to Lists
+    </a>
+</p>
+
+@if (Model != null && Model.Any())
+{
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table table-striped table-hover align-middle text-center table-dark">
+            <thead class="table-secondary text-dark">
+                <tr>
+                    <th hidden>Id</th>
+                    <th>Title</th>
+                    <th>Description</th>
+                    <th>Created</th>
+                    <th>Due Date</th>
+                    <th>User</th>
+                    <th>Status</th>
+                    <th style="width: 1%;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    var isCompleted = item.Status.ToString() == "Completed";
+                    var isOverdue = item.DueDate < DateTime.Now && !isCompleted;
+                    var isNotStarted = item.Status.ToString() == "NotStarted";
+                    var dueClass = isCompleted
+                    ? "bg-success text-light" : isOverdue ? "bg-danger text-light" : isNotStarted ? "bg-secondary text-light" : "bg-warning text-dark";
+
+                    <tr class="@dueClass">
+                        <td hidden>@item.Id</td>
+                        <td>@item.Title</td>
+                        <td>@item.Description</td>
+                        <td>@item.CreateDate.ToShortDateString()</td>
+                        <td>@item.DueDate.ToShortDateString()</td>
+                        <td>@item.UserId</td>
+                        <td>
+                            @if (isCompleted)
+                            {
+                                <span class="badge bg-success">Completed</span>
+                            }
+                            else if (isOverdue)
+                            {
+                                <span class="badge bg-danger">Overdue</span>
+                            }
+                            else if (isNotStarted)
+                            {
+                                <span class="badge bg-secondary">Not Started</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">In Progress</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">
+                                    <i class="bi bi-info-circle"></i>
+                                </a>
+                                <a asp-action="DeleteConfirm" asp-controller="TodoTask" asp-route-id="@item.Id" class="btn btn-sm btn-danger">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (ViewBag.TotalPages > 1)
+    {
+        <nav aria-label="Task pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+
+                <li class="page-item @(ViewBag.CurrentPage == 1 ? "disabled" : "")">
+                    <a class="page-link custom-dark"
+                       href="@Url.Action("TasksByList", new { todoListId = ViewBag.TodoListId, page = ViewBag.CurrentPage - 1, sortBy = ViewBag.SortBy })"
+                       aria-label="Previous"
+                       style="min-width: 40px; text-align: center;">
+                        &laquo;
+                    </a>
+                </li>
+
+                <li class="page-item shadow-sm">
+                    <a class="page-link custom-dark"
+                       href="@Url.Action("TasksByList", new { todoListId = ViewBag.TodoListId, page = ViewBag.CurrentPage, sortBy = ViewBag.SortBy })"
+                       style="min-width: 40px; text-align: center; background-color: #343a40 !important; color: #fff !important;">
+                        @ViewBag.CurrentPage
+                    </a>
+                </li>
+
+                <li class="page-item @(ViewBag.CurrentPage == ViewBag.TotalPages ? "disabled" : "")">
+                    <a class="page-link custom-dark"
+                       href="@Url.Action("TasksByList", new { todoListId = ViewBag.TodoListId, page = ViewBag.CurrentPage + 1, sortBy = ViewBag.SortBy })"
+                       aria-label="Next"
+                       style="min-width: 40px; text-align: center;">
+                        &raquo;
+                    </a>
+                </li>
+
+            </ul>
+        </nav>
+    }
+}
+else
+{
+    <div class="alert alert-secondary text-center mt-4">
+        No tasks found in this Todo List.
+    </div>
+}

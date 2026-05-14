@@ -1,0 +1,54 @@
+@model TodoListApp.WebApi.Models.Models.TodoTag.TagsTasksViewModel
+
+@{
+    ViewData["Title"] = "Tags & Tasks";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row g-4">
+        <div class="col-md-4 col-lg-3 bg-dark text-light p-4 rounded-3 shadow-sm"
+             style="height: 20vh; overflow-y: auto;">
+            <h3 class="mb-4 text-center">Tags</h3>
+
+            <select id="tagsDropdown" class="form-select bg-secondary text-light">
+                <option value="">Select a tag</option>
+                @foreach (var tag in Model.Tags)
+                {
+                    <option value="@tag.Id">@tag.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-8 col-lg-9" id="tasksContainer">
+            <p class="text-dark text-center mt-3">Select a tag to see associated tasks.</p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+    <script>
+               $(function () {
+            $('#tagsDropdown').change(function () {
+                var tagId = $(this).val();
+                if (tagId) {
+                    loadTasks(tagId, 1);
+                } else {
+                    $('#tasksContainer').html('<p class="text-light">Select a tag to see associated tasks.</p>');
+                }
+            });
+
+            $('#tasksContainer').on('click', '.pagination a', function (e) {
+                e.preventDefault();
+                var page = $(this).data('page');
+                var tagId = $('#tagsDropdown').val();
+                if (tagId && page) {
+                    loadTasks(tagId, page);
+                }
+            });
+
+            function loadTasks(tagId, page) {
+                $('#tasksContainer').load('/TodoTag/GetTasksByTagPartial?tagId=' + tagId + '&page=' + page);
+            }
+        });
+    </script>
+}

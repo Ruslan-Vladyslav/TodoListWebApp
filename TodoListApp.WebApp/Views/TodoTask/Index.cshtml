@@ -1,0 +1,130 @@
+@model IEnumerable<TodoListApp.WebApi.Models.Models.TodoTask.ModelTodoTask>
+
+@{
+    ViewData["Title"] = "Assigned Tasks";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-4 col-lg-3 bg-dark text-light p-4 rounded-3 shadow-sm" style="height: 45vh;">
+            <h3 class="mb-4 text-center">Filters</h3>
+
+            <form asp-action="Index" method="get">
+                <input type="hidden" name="page" value="@ViewBag.Page" />
+
+                <div class="mb-4">
+                    Filter by Status:
+                    <select class="form-control bg-secondary text-light"
+                            name="statusId"
+                            asp-items="@ViewBag.StatusFilter"
+                            onchange="this.form.submit()">
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    Sort By:
+                    <select class="form-control bg-secondary text-light"
+                            name="sortBy"
+                            asp-items="@ViewBag.SortOptions"
+                            onchange="this.form.submit()">
+                    </select>
+                </div>
+
+                <div class="d-flex justify-content-center">
+                    <button type="button" class="btn btn-outline-light"
+                            onclick="window.location.href='@Url.Action("Index", "TodoTask")'">
+                        Reset
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-md-8 col-lg-9 --backgroung-color p-2 rounded-3">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-dark">Assigned Tasks</h2>
+                <a asp-action="Create" class="btn btn-dark">
+                    <i class="bi bi-plus-circle"></i> New Task
+                </a>
+            </div>
+
+            <hr />
+
+            @if (!Model.Any())
+            {
+                <div class="alert alert-secondary text-center p-4">
+                    No tasks found
+                </div>
+            }
+            else
+            {
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                    @foreach (var item in Model)
+                    {
+                        bool isCompleted = item.Status.ToString() == "Completed";
+                        bool isOverdue = item.DueDate < DateTime.Now && !isCompleted;
+
+                        string borderClass = isCompleted ? "border-success" : isOverdue ? "border-danger" : "border-secondary";
+                        string badgeClass = isCompleted ? "bg-success" : isOverdue ? "bg-danger" : "bg-secondary";
+
+                        <div class="col">
+                            <div class="card shadow-sm border-3 @borderClass bg-dark text-light">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h5 class="card-title mb-0">@item.Title</h5>
+                                    </div>
+                                    <div class="mt-3">
+                                        <small class="text-light d-block">
+                                            <strong>Created:</strong> @item.CreateDate.ToShortDateString()
+                                        </small>
+                                        <small class="text-light d-block">
+                                            <strong>Due:</strong> @item.DueDate.ToShortDateString()
+                                        </small>
+                                        <small class="text-light d-block">
+                                            <strong>User:</strong> @item.UserId
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-0 teclxt-end">
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></a>
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info"><i class="bi bi-info-circle"></i></a>
+                                    <a asp-action="DeleteConfirm" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                @if (ViewBag.TotalPages > 1)
+                {
+                    <nav aria-label="Task pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+
+                            <li class="page-item @(ViewBag.CurrentPage == 1 ? "disabled" : "")">
+                                <a class="page-link custom-dark"
+                                   href="@Url.Action("Index", new { page = ViewBag.CurrentPage - 1, sortBy = ViewBag.SortBy, statusId = ViewBag.StatusId })"
+                                   aria-label="Previous">
+                                    &laquo;
+                                </a>
+                            </li>
+
+                            <li class="page-item shadow-sm">
+                                <a class="page-link custom-dark"
+                                   href="@Url.Action("Index", new { page = ViewBag.CurrentPage, sortBy = ViewBag.SortBy, statusId = ViewBag.StatusId })">
+                                    @ViewBag.CurrentPage
+                                </a>
+                            </li>
+
+                            <li class="page-item @(ViewBag.CurrentPage == ViewBag.TotalPages ? "disabled" : "")">
+                                <a class="page-link custom-dark"
+                                   href="@Url.Action("Index", new { page = ViewBag.CurrentPage + 1, sortBy = ViewBag.SortBy, statusId = ViewBag.StatusId })"
+                                   aria-label="Next">
+                                    &raquo;
+                                </a>
+                            </li>
+
+                        </ul>
+                    </nav>
+                }
+            }
+        </div>
+    </div>
+</div>

@@ -1,0 +1,37 @@
+@model TodoListApp.WebApi.Models.Models.Identity.ModelProfile
+@{
+    ViewData["Title"] = "Profile";
+}
+
+<div class="container mt-4">
+    <div class="card bg-dark text-light shadow-lg border-secondary border-2">
+        <div class="card-body">
+            <h2 class="card-title mb-4">Profile</h2>
+            <hr class="border-secondary" />
+
+            <dl class="row">
+                <dt class="col-sm-3">Username</dt>
+                <dd class="col-sm-9">@Model.Username</dd>
+
+                <dt class="col-sm-3">Email</dt>
+                <dd class="col-sm-9">@Model.Email</dd>
+            </dl>
+
+            <hr class="border-secondary" />
+
+            <div class="mt-4">
+                <form asp-action="Delete" method="post"
+                      onsubmit="return confirm('Are you sure you want to delete your account?');"
+                      class="d-inline">
+                    <button type="submit" class="btn btn-outline-danger me-2">
+                        <i class="bi bi-trash"></i> Delete Account
+                    </button>
+                </form>
+
+                <a asp-action="Index" asp-controller="Home" class="btn btn-outline-light">
+                    Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,74 @@
+@model TodoListApp.WebApi.Models.Models.TodoTask.ModelTodoTask
+@{
+    ViewData["Title"] = "Task Details";
+}
+
+<div class="container mt-4">
+    <div class="card bg-dark text-light shadow-lg border-secondary border-2">
+        <div class="card-body">
+            <h2 class="card-title mb-4">Task Details</h2>
+            <hr class="border-secondary" />
+
+            <dl class="row">
+                <dt class="col-sm-3">Title</dt>
+                <dd class="col-sm-9">@Model.Title</dd>
+
+                <dt class="col-sm-3">Description</dt>
+                <dd class="col-sm-9">@Model.Description</dd>
+
+                <dt class="col-sm-3">Status</dt>
+                <dd class="col-sm-9">@Model.Status</dd>
+
+                <dt class="col-sm-3">Created</dt>
+                <dd class="col-sm-9">@Model.CreateDate.ToShortDateString()</dd>
+
+                <dt class="col-sm-3">Due</dt>
+                <dd class="col-sm-9">@Model.DueDate.ToShortDateString()</dd>
+                <dd hidden class="col-sm-9">@Model.TodoListId</dd>
+
+                <dt class="col-sm-3">Assigned User</dt>
+                <dd class="col-sm-9">@Model.AssignedUserId</dd>
+            </dl>
+
+            <hr class="border-secondary" />
+            <h5 class="mt-4">Tags</h5>
+            @if (Model.Tags?.Any() == true)
+            {
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var tag in Model.Tags)
+                    {
+                        <span class="badge bg-secondary fs-6 px-3 py-2">@tag.Name</span>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-light fst-italic">No tags assigned.</p>
+            }
+
+            <h5 class="mt-4">Comments</h5>
+            @if (Model.Comments?.Any() == true)
+            {
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var comment in Model.Comments)
+                    {
+                        <span class="badge bg-dark border border-secondary text-light fs-6 px-3 py-2">@comment.Text</span>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-light fst-italic">No comments available.</p>
+            }
+
+            <div class="mt-4">
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-warning me-2">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+                <a asp-action="Index" class="btn btn-outline-light">
+                    Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
