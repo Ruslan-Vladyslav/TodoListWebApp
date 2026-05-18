@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using TodoListApp.Services.Enums;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.WebApi.Models.Models.TodoComment;
 using TodoListApp.WebApi.Models.Models.TodoTask;
+using TodoListApp.WebApp.Models;
 
 namespace TodoListApp.WebApp.Controllers;
 
@@ -295,82 +297,99 @@ public class TodoTaskController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Search(string? searchType = "Title", int page = 1)
-    {
-        var tags = await _todoTagService.GetAllTagsAsync(1, pageSize);
-        ViewBag.SearchTypeOptions = new SelectList(new[]
+    public async Task<IActionResult> Search(
+        string searchType = "Title",
+        string? title = null,
+        DateTime? createDate = null,
+        DateTime? dueDate = null,
+        int? tagId = null,
+        int page = 1)
         {
-        new SelectListItem { Text = "Title", Value = "Title" },
-        new SelectListItem { Text = "Creation Date", Value = "CreationDate" },
-        new SelectListItem { Text = "Due Date", Value = "DueDate" },
-        new SelectListItem { Text = "Tag", Value = "Tag" }
-    }, "Value", "Text", searchType);
+        var userName = User.Identity!.Name;
+        var pageSize = 6;
 
-        ViewBag.Tags = new SelectList(tags, "Id", "Name");
-        ViewBag.Page = page;
-        ViewBag.TotalPages = 0;
-
-        return View(new SearchTasksViewModel { SearchType = searchType ?? "Title" });
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> Search(SearchTasksViewModel model, int page = 1)
-    {
-        var UserName = User.Identity!.Name;
         var tags = await _todoTagService.GetAllTagsAsync(1, pageSize);
-
-        ViewBag.SearchTypeOptions = new SelectList(new[]
-        {
-        new SelectListItem { Text = "Title", Value = "Title" },
-        new SelectListItem { Text = "Creation Date", Value = "CreationDate" },
-        new SelectListItem { Text = "Due Date", Value = "DueDate" },
-        new SelectListItem { Text = "Tag", Value = "Tag" }
-    }, "Value", "Text", model.SearchType);
-
-        ViewBag.Tags = new SelectList(tags, "Id", "Name");
 
         IEnumerable<ModelTodoTask> allResults = Enumerable.Empty<ModelTodoTask>();
 
-        switch (model.SearchType)
+        ViewBag.SearchTypeOptions = new SelectList(new[]
+        {
+            new SelectListItem { Text = "Title", Value = "Title" },
+            new SelectListItem { Text = "Creation Date", Value = "CreationDate" },
+            new SelectListItem { Text = "Due Date", Value = "DueDate" },
+            new SelectListItem { Text = "Tag", Value = "Tag" }
+        }, "Value", "Text", searchType);
+
+        switch (searchType)
         {
             case "Title":
-                if (!string.IsNullOrWhiteSpace(model.Title))
+                if (!string.IsNullOrWhiteSpace(title))
                 {
-                    allResults = await _todoTaskService.GetAllTasksByTitleAsync(1, int.MaxValue, UserName, model.Title);
+                    allResults = await _todoTaskService.GetAllTasksByTitleAsync(1, int.MaxValue, userName, title);
                 }
+
                 break;
 
             case "CreationDate":
-                if (model.CreateDate.HasValue)
+                if (createDate.HasValue)
                 {
-                    allResults = await _todoTaskService.GetAllTasksByCreateDateAsync(1, int.MaxValue, UserName, model.CreateDate.Value);
+                    allResults = await _todoTaskService.GetAllTasksByCreateDateAsync(1, int.MaxValue, userName, createDate.Value);
                 }
+
                 break;
 
             case "DueDate":
-                if (model.DueDate.HasValue)
+                if (dueDate.HasValue)
                 {
-                    allResults = await _todoTaskService.GetAllTasksByDueDateAsync(1, int.MaxValue, UserName, model.DueDate.Value);
+                    allResults = await _todoTaskService.GetAllTasksByDueDateAsync(1, int.MaxValue, userName, dueDate.Value);
                 }
+
                 break;
 
             case "Tag":
-                if (model.TagId.HasValue)
+                if (tagId.HasValue)
                 {
-                    allResults = await _todoTagService.GetTasksByTagAsync(model.TagId.Value);
+                    allResults = await _todoTagService.GetTasksByTagAsync(tagId.Value);
                 }
+
                 break;
             default:
                 break;
         }
 
-        var pagedResults = allResults.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-
         ViewBag.Page = page;
         ViewBag.TotalPages = (int)Math.Ceiling(allResults.Count() / (double)pageSize);
 
-        model.Results = pagedResults;
-        return View(model);
+        ViewBag.SearchType = searchType;
+        ViewBag.Title = title;
+        ViewBag.CreateDate = createDate;
+        ViewBag.DueDate = dueDate;
+        ViewBag.TagId = tagId;
+
+        ViewBag.Tags = new SelectList(tags, "Id", "Name");
+
+        var paged = allResults
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        var totalPages = (int)Math.Ceiling(allResults.Count() / (double)pageSize);
+
+        var vm = new TasksPartialViewModel
+        {
+            Tasks = paged,
+            CurrentPage = page,
+            TotalPages = totalPages,
+            SearchType = searchType,
+            TagId = tagId,
+            Title = title,
+            CreateDate = createDate,
+            DueDate = dueDate,
+            Action = "Search",
+            Controller = "TodoTask",
+        };
+
+        return View(vm);
     }
 
     public async Task<ActionResult> TasksByList(int todoListId, int page = 1, string? sortBy = null)

@@ -23,18 +23,6 @@
                 RememberMe
             </div>
 
-            @if (!ViewData.ModelState.IsValid)
-            {
-                <div class="text-danger mb-3">
-                    <ul>
-                        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
-                        {
-                            <li>@error.ErrorMessage</li>
-                        }
-                    </ul>
-                </div>
-            }
-
             <div class="d-grid gap-2">
                 <button type="submit" class="btn btn-primary">Login</button>
             </div>

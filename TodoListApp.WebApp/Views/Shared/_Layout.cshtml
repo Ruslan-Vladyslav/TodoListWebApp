@@ -11,6 +11,21 @@
     <link rel="stylesheet" href="~/TodoListApp.WebApp.styles.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 </head>
+@functions {
+    string IsActive(string controller, string action = null)
+    {
+        var currentController = ViewContext.RouteData.Values["Controller"]?.ToString();
+        var currentAction = ViewContext.RouteData.Values["Action"]?.ToString();
+
+        if (!string.IsNullOrEmpty(action))
+        {
+            return (currentController == controller && currentAction == action)
+                ? "active"
+                : "";
+        }
+        return currentController == controller ? "active" : "";
+    }
+}
 <body>
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
@@ -23,19 +38,19 @@
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="nav-link text-dark @IsActive("Home")" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="TodoList" asp-action="Index">Todo-Lists</a>
+                            <a class="nav-link text-dark @IsActive("TodoList")" asp-area="" asp-controller="TodoList" asp-action="Index">Todo-Lists</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="TodoTask" asp-action="Index">Tasks</a>
+                            <a class="nav-link text-dark @IsActive("TodoTask", "Index")" asp-area="" asp-controller="TodoTask" asp-action="Index">Tasks</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="TodoTag" asp-action="Index">Tags</a>
+                            <a class="nav-link text-dark @IsActive("TodoTag")" asp-area="" asp-controller="TodoTag" asp-action="Index">Tags</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="TodoTask" asp-action="Search">Search</a>
+                            <a class="nav-link text-dark @IsActive("TodoTask", "Search")" asp-area="" asp-controller="TodoTask" asp-action="Search">Search</a>
                         </li>
                     </ul>
                     <div class="d-flex align-items-center">
@@ -69,7 +84,7 @@
 
     <footer class="border-top footer text-muted">
         <div class="container text-center">
-            &copy; 2025 - TodoListApp.WebApp -
+            &copy; 2026 - TodoListApp.WebApp -
             <a asp-area="" asp-controller="Home" asp-action="Privacy" style="text-decoration: none; color: inherit;">Privacy</a>
         </div>
     </footer>

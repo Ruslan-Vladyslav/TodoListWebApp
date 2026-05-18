@@ -17,4 +17,6 @@ public class ModelTodoList
     public string? Description { get; set; }
 
     public IEnumerable<ModelTodoTask>? TodoTasks { get; set; }
+
+    public int TaskCount { get; set; }
 }

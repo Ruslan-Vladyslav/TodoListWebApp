@@ -9,7 +9,7 @@ namespace TodoListApp.WebApp.Controllers;
 public class TodoListController : Controller
 {
     private readonly ITodoListService _todoListService;
-    private readonly int pageSize = 10;
+    private readonly int pageSize = 8;
 
     public TodoListController(ITodoListService todoListService)
     {
@@ -29,8 +29,19 @@ public class TodoListController : Controller
             return this.Challenge();
         }
 
-        var lists = await this._todoListService.GetAllListByUserAsync(page, this.pageSize, userName);
-        return this.View(lists);
+        var allLists = await this._todoListService.GetAllListByUserAsync(1, int.MaxValue, userName);
+
+        int totalLists = allLists.Count();
+
+        var pagedLists = allLists
+            .Skip((page - 1) * this.pageSize)
+            .Take(this.pageSize)
+            .ToList();
+
+        this.ViewBag.CurrentPage = page;
+        this.ViewBag.TotalPages = (int)Math.Ceiling(totalLists / (double)this.pageSize);
+
+        return this.View(pagedLists);
     }
 
     public async Task<IActionResult> Details(int id)

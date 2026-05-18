@@ -16,14 +16,14 @@ public class TodoListController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllLists([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetAllLists([FromQuery] int page = 1, [FromQuery] int pageSize = 8)
     {
         var lists = await this._todoListService.GetAllListAsync(page, pageSize);
         return this.Ok(lists);
     }
 
     [HttpGet("user/{userId}")]
-    public async Task<IActionResult> GetAllListsByUser(string userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetAllListsByUser(string userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 8)
     {
         var lists = await this._todoListService.GetAllListByUserAsync(page, pageSize, userId);
         return this.Ok(lists);
