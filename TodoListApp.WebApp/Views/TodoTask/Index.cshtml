@@ -1,3 +1,4 @@
+@using TodoListApp.WebApi.Models.Helper
 @model IEnumerable<TodoListApp.WebApi.Models.Models.TodoTask.ModelTodoTask>
 
 @{
@@ -79,25 +80,26 @@
                         <div class="col">
                             <div class="card shadow-sm border-2 @borderClass bg-dark text-light h-100">
                                 <div class="card-body p-3">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <h5 class="card-title mb-0">
+                                    <div class="d-flex justify-content-between align-items-start gap-2">
+
+                                        <h5 class="card-title mb-0 text-clamp-1 flex-grow-1">
                                             @item.Title
                                         </h5>
 
-                                        <span class="badge @badgeClass">
-
+                                        <span class="badge @badgeClass flex-shrink-0">
                                             @if (isOverdue)
                                             {
                                                 @:Overdue
                                             }
                                             else
                                             {
-                                                @item.Status
+                                                @item.Status.GetDisplayName()
                                             }
                                         </span>
+
                                     </div>
 
-                                    <p class="card-text text-secondary small mb-2 text-truncate">
+                                    <p class="card-text text-secondary small mb-2 text-clamp-1">
 
                                         @(string.IsNullOrWhiteSpace(item.Description)
                                             ? "No description"
@@ -110,7 +112,7 @@
                                     </small>
 
                                     <small class="text-light d-block">
-                                        <strong>Due:</strong>
+                                        <strong>Due Date:</strong>
                                         @item.DueDate.ToShortDateString()
                                     </small>
 

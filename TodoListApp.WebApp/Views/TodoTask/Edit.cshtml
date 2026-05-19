@@ -22,13 +22,22 @@
 
             <div class="form-group mb-3">
                 <label asp-for="Description" class="form-label text-light fw-bold"></label>
-                <textarea asp-for="Description" class="form-control bg-secondary text-light border-0"></textarea>
+                <textarea asp-for="Description"
+                          class="form-control bg-secondary text-light border-0"
+                          style="height: 120px; resize: vertical; overflow-y: auto;">
+                </textarea>
                 <span asp-validation-for="Description" class="text-danger"></span>
             </div>
 
             <div class="form-group mb-3">
-                <label asp-for="DueDate" class="form-label text-light fw-bold"></label>
-                <input asp-for="DueDate" type="date" class="form-control bg-secondary text-light border-0" />
+                <label asp-for="DueDate" class="form-label text-light fw-bold">
+                    Due Date
+                </label>
+
+                <input asp-for="DueDate"
+                       type="datetime-local"
+                       class="form-control bg-secondary text-light border-0" />
+
                 <span asp-validation-for="DueDate" class="text-danger"></span>
             </div>
 
@@ -39,7 +48,7 @@
             </div>
 
             <div class="form-group mb-3">
-                <label asp-for="UserId" class="form-label text-light fw-bold"></label>
+                <label asp-for="UserId" class="form-label text-light fw-bold">User</label>
                 <input asp-for="UserId" class="form-control bg-secondary text-light border-0" />
                 <span asp-validation-for="UserId" class="text-danger"></span>
             </div>
@@ -92,7 +101,7 @@
             <input type="hidden" name="taskId" value="@Model.Id" />
             <div class="input-group">
                 <input type="text" name="newTagName" class="form-control bg-secondary text-light border-0" placeholder="New tag name" />
-                <button type="submit" class="btn btn-success">Add New</button>
+                <button type="submit" class="btn btn-primary">Add New</button>
             </div>
         </form>
 

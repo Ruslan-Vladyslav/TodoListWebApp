@@ -20,7 +20,7 @@ public class ModelTodoTask
     public DateTime CreateDate { get; set; }
 
     [Required]
-    public DateTime DueDate { get; set; }
+    public DateTime DueDate { get; set; } = DateTime.Today;
 
     [Required]
     public TodoTaskStatus Status { get; set; } = TodoTaskStatus.NotStarted;

@@ -27,18 +27,18 @@
                 <div class="card h-100 shadow-sm border-3 @borderClass bg-dark text-light">
                     <div class="card-body p-3">
 
-                        <h5>@task.Title</h5>
+                        <h5 class="text-clamp-1">@task.Title</h5>
 
                         <span class="badge @badgeClass">
                             @task.Status.GetDisplayName()
                         </span>
 
-                        <p class="text-secondary small mt-2">
+                        <p class="text-secondary small mt-2 text-clamp-1">
                             @(task.Description ?? "No description")
                         </p>
 
                         <small>Created: @task.CreateDate</small><br />
-                        <small>Due: @task.DueDate</small>
+                        <small>Due Date: @task.DueDate.ToShortDateString()</small>
                     </div>
                     <div class="card-footer bg-transparent border-0 text-end">
                         <a asp-action="Details"

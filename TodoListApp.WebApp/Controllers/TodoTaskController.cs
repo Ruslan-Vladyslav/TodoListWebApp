@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -69,7 +70,11 @@ public class TodoTaskController : Controller
         this.ViewBag.StatusFilter = new SelectList(
             Enum.GetValues(typeof(TodoTaskStatus))
                 .Cast<TodoTaskStatus>()
-                .Select(e => new { Id = (int)e, Name = e.ToString() }),
+                .Select(e => new
+                {
+                    Id = (int)e,
+                    Name = Regex.Replace(e.ToString(), "(\\B[A-Z])", " $1")
+                }),
             "Id",
             "Name",
             statusId
@@ -164,7 +169,11 @@ public class TodoTaskController : Controller
         this.ViewBag.Statuses = new SelectList(
             Enum.GetValues(typeof(TodoTaskStatus))
                 .Cast<TodoTaskStatus>()
-                .Select(e => new { Id = (int)e, Name = e.ToString() }),
+                .Select(e => new
+                {
+                    Id = (int)e,
+                    Name = Regex.Replace(e.ToString(), "(\\B[A-Z])", " $1")
+                }),
             "Id",
             "Name",
             task.Status
@@ -175,7 +184,7 @@ public class TodoTaskController : Controller
             Id = task.Id,
             Title = task.Title,
             Description = task.Description,
-            DueDate = task.DueDate,
+            DueDate = task.DueDate.ToLocalTime(),
             Status = task.Status,
             UserId = task.UserId,
             AssignedUserId = task.AssignedUserId,
@@ -201,7 +210,11 @@ public class TodoTaskController : Controller
             this.ViewBag.Statuses = new SelectList(
                 Enum.GetValues(typeof(TodoTaskStatus))
                     .Cast<TodoTaskStatus>()
-                    .Select(e => new { Id = (int)e, Name = e.ToString() }),
+                    .Select(e => new
+                    {
+                        Id = (int)e,
+                        Name = Regex.Replace(e.ToString(), "(\\B[A-Z])", " $1")
+                    }),
                 "Id",
                 "Name",
                 model.Status
@@ -214,6 +227,7 @@ public class TodoTaskController : Controller
             return this.View(model);
         }
 
+        model.DueDate = model.DueDate.ToUniversalTime();
         await this._todoTaskService.UpdateTaskAsync(id, model);
         return this.RedirectToAction(nameof(Index));
     }

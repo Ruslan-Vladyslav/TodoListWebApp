@@ -20,10 +20,10 @@
                 <dd class="col-sm-9">@Model.Status</dd>
 
                 <dt class="col-sm-3">Created</dt>
-                <dd class="col-sm-9">@Model.CreateDate.ToShortDateString()</dd>
+                <dd class="col-sm-9">@Model.CreateDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</dd>
 
-                <dt class="col-sm-3">Due</dt>
-                <dd class="col-sm-9">@Model.DueDate.ToShortDateString()</dd>
+                <dt class="col-sm-3">Due Date</dt>
+                <dd class="col-sm-9">@Model.DueDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</dd>
                 <dd hidden class="col-sm-9">@Model.TodoListId</dd>
 
                 <dt class="col-sm-3">Assigned User</dt>
@@ -66,7 +66,7 @@
                     <i class="bi bi-pencil"></i> Edit
                 </a>
                 <a asp-action="Index" class="btn btn-outline-light">
-                    Back to List
+                    Back to Task List
                 </a>
             </div>
         </div>
