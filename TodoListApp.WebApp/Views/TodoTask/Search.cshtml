@@ -5,8 +5,8 @@
 }
 
 <div class="container-fluid mt-4">
-    <div class="row g-4">
-        <div class="col-md-4 col-lg-3 bg-dark text-light p-4 rounded-3 shadow-sm" style="height: 42vh;">
+    <div class="row g-4 align-items-start">
+        <div class="col-md-4 col-lg-3 bg-dark text-light p-4 rounded-3 shadow-sm" style="min-height: 42vh;">
             <h3 class="mb-4 text-center">Search Tasks</h3>
 
             <form asp-action="Search" method="get">
@@ -45,6 +45,28 @@
                         <select asp-for="TagId" asp-items="@ViewBag.Tags" class="form-control bg-secondary text-light">
                             <option value="">-- Choose a tag --</option>
                         </select>
+                    </div>
+                }
+                else if (Model.SearchType == "DateRange")
+                {
+                    <div class="mb-3">
+                        <label class="text-light">
+                            From
+                        </label>
+
+                        <input asp-for="FromDate"
+                               type="date"
+                               class="form-control bg-secondary text-light" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="text-light">
+                            To
+                        </label>
+
+                        <input asp-for="ToDate"
+                               type="date"
+                               class="form-control bg-secondary text-light" />
                     </div>
                 }
 

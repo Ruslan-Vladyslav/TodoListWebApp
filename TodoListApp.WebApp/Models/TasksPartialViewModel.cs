@@ -20,6 +20,10 @@ public class TasksPartialViewModel
 
     public DateTime? DueDate { get; set; }
 
+    public DateTime? FromDate { get; set; }
+
+    public DateTime? ToDate { get; set; } = DateTime.Today.AddDays(1);
+
     public string Action { get; set; } = "Index";
 
     public string Controller { get; set; } = "TodoTag";

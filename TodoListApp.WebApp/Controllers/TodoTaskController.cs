@@ -2,7 +2,6 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using TodoListApp.Services.Enums;
@@ -316,9 +315,11 @@ public class TodoTaskController : Controller
         string? title = null,
         DateTime? createDate = null,
         DateTime? dueDate = null,
+        DateTime? fromDate = null,
+        DateTime? toDate = null,
         int? tagId = null,
         int page = 1)
-        {
+    {
         var userName = User.Identity!.Name;
         var pageSize = 6;
 
@@ -331,7 +332,8 @@ public class TodoTaskController : Controller
             new SelectListItem { Text = "Title", Value = "Title" },
             new SelectListItem { Text = "Creation Date", Value = "CreationDate" },
             new SelectListItem { Text = "Due Date", Value = "DueDate" },
-            new SelectListItem { Text = "Tag", Value = "Tag" }
+            new SelectListItem { Text = "Tag", Value = "Tag" },
+            new SelectListItem { Text = "Date Range", Value = "DateRange" }
         }, "Value", "Text", searchType);
 
         switch (searchType)
@@ -358,6 +360,19 @@ public class TodoTaskController : Controller
                     allResults = await _todoTaskService.GetAllTasksByDueDateAsync(1, int.MaxValue, userName, dueDate.Value);
                 }
 
+                break;
+
+            case "DateRange":
+                if (fromDate.HasValue && toDate.HasValue)
+                {
+                    allResults =
+                        await _todoTaskService.GetAllTasksByDateRangeAsync(
+                            1,
+                            int.MaxValue,
+                            userName,
+                            fromDate.Value,
+                            toDate.Value);
+                }
                 break;
 
             case "Tag":
@@ -399,6 +414,8 @@ public class TodoTaskController : Controller
             Title = title,
             CreateDate = createDate,
             DueDate = dueDate,
+            FromDate = fromDate,
+            ToDate = toDate,
             Action = "Search",
             Controller = "TodoTask",
         };
