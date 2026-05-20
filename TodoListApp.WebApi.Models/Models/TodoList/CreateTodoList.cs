@@ -12,4 +12,6 @@ public class CreateTodoList
     public string Description { get; set; } = string.Empty;
 
     public string? UserId { get; set; }
+
+    public string? UserName { get; set; }
 }

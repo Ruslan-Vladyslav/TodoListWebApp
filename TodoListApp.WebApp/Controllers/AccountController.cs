@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using TodoListApp.WebApi.Models.Models.Identity;
+using TodoListApp.WebApp.Models.Account;
 
 namespace TodoListApp.WebApp.Controllers;
 
@@ -133,4 +134,103 @@ public class AccountController : Controller
         return this.View("Profile", model);
     }
 
+
+    [Authorize]
+    [HttpGet]
+    public async Task<IActionResult> EditProfile()
+    {
+        var user = await _userManager.GetUserAsync(User);
+
+        if (user == null)
+        {
+            return RedirectToAction("Login");
+        }
+
+        var model = new EditProfileViewModel
+        {
+            Username = user.UserName!,
+            Email = user.Email!
+        };
+
+        return View(model);
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditProfile(EditProfileViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var user = await _userManager.GetUserAsync(User);
+
+        if (user == null)
+        {
+            return RedirectToAction("Login");
+        }
+
+        var existingUser = await _userManager.FindByNameAsync(model.Username);
+
+        if (existingUser != null && existingUser.Id != user.Id)
+        {
+            ModelState.AddModelError("Username", "Username already taken");
+            return View(model);
+        }
+
+        user.UserName = model.Username;
+
+        var result = await _userManager.UpdateAsync(user);
+
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError("", error.Description);
+            }
+            return View(model);
+        }
+
+        await _signInManager.RefreshSignInAsync(user);
+        return RedirectToAction("Profile");
+    }
+
+    [Authorize]
+    [HttpGet]
+    public IActionResult ChangePassword()
+    {
+        return View(new EditPasswordViewModel());
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangePassword(EditPasswordViewModel model)
+    {
+        var user = await _userManager.GetUserAsync(User);
+
+        if (user == null)
+        {
+            return RedirectToAction("Login");
+        }
+
+        var result = await _userManager.ChangePasswordAsync(
+            user,
+            model.CurrentPassword!,
+            model.NewPassword!
+        );
+
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(nameof(model.CurrentPassword), "Incorrect current password");
+            }
+
+            return View(model);
+        }
+        return RedirectToAction("Profile");
+    }
 }

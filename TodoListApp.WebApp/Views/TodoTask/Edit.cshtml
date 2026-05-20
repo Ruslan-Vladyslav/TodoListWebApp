@@ -11,6 +11,7 @@
         <form asp-action="Edit" method="post" class="text-light">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="UserId" />
 
             <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
@@ -48,9 +49,11 @@
             </div>
 
             <div class="form-group mb-3">
-                <label asp-for="UserId" class="form-label text-light fw-bold">User</label>
-                <input asp-for="UserId" class="form-control bg-secondary text-light border-0" />
-                <span asp-validation-for="UserId" class="text-danger"></span>
+                <label class="form-label text-light fw-bold">User</label>
+
+                <input value="@Model.UserName"
+                       class="form-control bg-secondary text-light border-0"
+                       readonly />
             </div>
 
             <div class="form-group mb-4">

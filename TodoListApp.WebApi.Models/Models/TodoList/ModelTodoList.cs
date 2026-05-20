@@ -13,6 +13,8 @@ public class ModelTodoList
 
     public string? UserId { get; set; }
 
+    public string? UserName { get; set; }
+
     [MaxLength(500, ErrorMessage = "Description must not be more than 500 characters.")]
     public string? Description { get; set; }
 

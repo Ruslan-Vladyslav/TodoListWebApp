@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using TodoListApp.Services.Database.Entity;
 using TodoListApp.Services.Interfaces;
@@ -118,7 +119,6 @@ public class TodoListDatabaseService : ITodoListService
 
         entity.Title = item.Title!;
         entity.Description = item.Description;
-        entity.UserId = item.UserId;
 
         _ = this.todoListContext.TodoLists.Update(entity);
         _ = await this.todoListContext.SaveChangesAsync();

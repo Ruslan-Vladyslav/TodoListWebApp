@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.WebApi.Models.Models.TodoList;
@@ -9,39 +10,44 @@ namespace TodoListApp.WebApp.Controllers;
 public class TodoListController : Controller
 {
     private readonly ITodoListService _todoListService;
+    private readonly UserManager<IdentityUser> _userManager;
+
     private readonly int pageSize = 8;
 
-    public TodoListController(ITodoListService todoListService)
+    public TodoListController(ITodoListService todoListService, UserManager<IdentityUser> userManager)
     {
         this._todoListService = todoListService;
+        this._userManager = userManager;
     }
 
     public async Task<IActionResult> Index(int page = 1)
     {
-        if (!this.ModelState.IsValid)
+        var userId = _userManager.GetUserId(User);
+
+        if (string.IsNullOrEmpty(userId))
         {
-            return this.View("Error");
+            return Challenge();
         }
 
-        var userName = User.Identity?.Name;
-        if (string.IsNullOrEmpty(userName))
+        var allLists = await _todoListService.GetAllListByUserAsync(1, int.MaxValue, userId);
+
+        var user = await _userManager.GetUserAsync(User);
+        var userName = user?.UserName;
+
+        foreach (var list in allLists)
         {
-            return this.Challenge();
+            list.UserName = userName;
         }
 
-        var allLists = await this._todoListService.GetAllListByUserAsync(1, int.MaxValue, userName);
-
-        int totalLists = allLists.Count();
-
-        var pagedLists = allLists
-            .Skip((page - 1) * this.pageSize)
-            .Take(this.pageSize)
+        var paged = allLists
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToList();
 
-        this.ViewBag.CurrentPage = page;
-        this.ViewBag.TotalPages = (int)Math.Ceiling(totalLists / (double)this.pageSize);
+        ViewBag.CurrentPage = page;
+        ViewBag.TotalPages = (int)Math.Ceiling(allLists.Count() / (double)pageSize);
 
-        return this.View(pagedLists);
+        return View(paged);
     }
 
     public async Task<IActionResult> Details(int id)
@@ -51,10 +57,15 @@ public class TodoListController : Controller
             return this.View("Error");
         }
         var list = await this._todoListService.GetByIdListAsync(id);
+
         if (list == null)
         {
-            return this.NotFound();
+            return NotFound();
         }
+
+        var user = await _userManager.GetUserAsync(User);
+        list.UserName = user?.UserName;
+
         return this.View(list);
     }
 
@@ -72,7 +83,7 @@ public class TodoListController : Controller
             return this.View(model);
         }
 
-        model.UserId = User.Identity?.Name;
+        model.UserId = _userManager.GetUserId(User);
 
         _ = await this._todoListService.CreateListAsync(model);
         return this.RedirectToAction(nameof(Index));
@@ -96,7 +107,6 @@ public class TodoListController : Controller
         {
             Title = list.Title!,
             Description = list.Description!,
-            UserId = list.UserId,
         };
 
         return this.View(updateModel);
@@ -106,13 +116,26 @@ public class TodoListController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, UpdateTodoList model)
     {
-        if (!this.ModelState.IsValid)
+        if (!ModelState.IsValid)
         {
-            return this.View(model);
+            return View(model);
         }
 
-        await this._todoListService.UpdateListAsync(id, model);
-        return this.RedirectToAction(nameof(Index));
+        var userId = _userManager.GetUserId(User);
+        var list = await _todoListService.GetByIdListAsync(id);
+
+        if (list == null)
+        {
+            return NotFound();
+        }
+
+        if (list.UserId != userId)
+        {
+            return Forbid();
+        }
+
+        await _todoListService.UpdateListAsync(id, model);
+        return RedirectToAction(nameof(Index));
     }
 
     public async Task<IActionResult> DeleteConfirm(int id)

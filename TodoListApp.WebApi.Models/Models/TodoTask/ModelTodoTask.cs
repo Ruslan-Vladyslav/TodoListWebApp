@@ -27,6 +27,8 @@ public class ModelTodoTask
 
     public string UserId { get; set; } = string.Empty;
 
+    public string? UserName { get; set; }
+
     public string? AssignedUserId { get; set; }
 
     public int TodoListId { get; set; }
