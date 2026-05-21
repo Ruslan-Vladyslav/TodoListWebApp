@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using TodoListApp.WebApi.Models.Models.Identity;
 using TodoListApp.WebApp.Models.Account;
+using TodoListApp.WebApp.Services.Email;
 
 namespace TodoListApp.WebApp.Controllers;
 
@@ -10,11 +11,13 @@ public class AccountController : Controller
 {
     private readonly UserManager<IdentityUser> _userManager;
     private readonly SignInManager<IdentityUser> _signInManager;
+    private readonly EmailService _emailService;
 
-    public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager)
+    public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, EmailService emailService)
     {
         this._userManager = userManager;
         this._signInManager = signInManager;
+        this._emailService = emailService;
     }
 
     [Authorize]
@@ -232,5 +235,89 @@ public class AccountController : Controller
             return View(model);
         }
         return RedirectToAction("Profile");
+    }
+
+    [HttpGet]
+    public IActionResult ForgotPassword()
+    {
+        return View();
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var user = await _userManager.FindByEmailAsync(model.Email);
+
+        if (user == null)
+        {
+            return View("ForgotPasswordConfirmation");
+        }
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+        var link = Url.Action(
+            "ResetPassword",
+            "Account",
+            new { token, email = user.Email },
+            Request.Scheme);
+
+        await _emailService.SendEmailAsync(
+            user.Email!,
+            "Reset Password",
+            $"Click here to reset password: <a href='{link}'>Reset Password</a>"
+        );
+        return View("ForgotPasswordConfirmation");
+    }
+
+    [HttpGet]
+    public IActionResult ResetPassword(
+    string token,
+    string email)
+    {
+        return View(new ResetPasswordViewModel
+        {
+            Token = token,
+            Email = email
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var user = await _userManager.FindByEmailAsync(model.Email);
+
+        if (user == null)
+        {
+            return RedirectToAction("ResetPasswordConfirmation");
+        }
+
+        var result = await _userManager.ResetPasswordAsync(
+            user,
+            model.Token,
+            model.NewPassword
+        );
+
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError("", error.Description);
+            }
+
+            return View(model);
+        }
+        return RedirectToAction("Login");
     }
 }

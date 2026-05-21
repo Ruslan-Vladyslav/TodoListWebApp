@@ -11,12 +11,12 @@
             <div class="mb-3">
                 Email
                 <input asp-for="Email" class="form-control" />
-                <span asp-validation-for="Email" class="text-danger"></span>
+                <span asp-validation-for="Email" class="text-danger d-block" style="min-height: 1.5em;"></span>
             </div>
             <div class="mb-3">
                 Password
                 <input asp-for="Password" type="password" class="form-control" />
-                <span asp-validation-for="Password" class="text-danger"></span>
+                <span asp-validation-for="Password" class="text-danger d-block" style="min-height: 1.5em;"></span>
             </div>
             <div class="form-check mb-3">
                 <input asp-for="RememberMe" class="form-check-input" />
@@ -26,6 +26,25 @@
             <div class="d-grid gap-2">
                 <button type="submit" class="btn btn-primary">Login</button>
             </div>
+
+            <div class="text-center mt-3">
+                Don't have an account?
+                <a asp-action="Register"
+                   asp-controller="Account">
+                    Register
+                </a>
+            </div>
         </form>
+
+        <div class="text-center mt-3">
+            <a asp-action="ForgotPassword"
+               asp-controller="Account">
+                Forgot your password?
+            </a>
+        </div>
+
+        @section Scripts {
+            @await Html.PartialAsync("_ValidationScriptsPartial")
+        }
     </div>
 </div>
