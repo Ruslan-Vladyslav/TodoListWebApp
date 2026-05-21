@@ -216,6 +216,47 @@ public class TodoTaskDatabaseService : ITodoTaskService
         });
     }
 
+    public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByDateRangeAsync(
+        int page,
+        int pageSize,
+        string? userId,
+        DateTime fromDate,
+        DateTime toDate)
+    {
+        var query = this._todoListContext.TodoTasks.AsQueryable();
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            query = query.Where(t => t.UserId == userId);
+        }
+
+        var startDate = fromDate.Date;
+        var endDate = toDate.Date.AddDays(1);
+
+        query = query.Where(t =>
+            t.DueDate >= startDate &&
+            t.DueDate < endDate);
+
+        var items = await query
+            .OrderBy(t => t.DueDate)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return items.Select(e => new ModelTodoTask
+        {
+            Id = e.Id,
+            Title = e.Title,
+            Description = e.Description,
+            DueDate = e.DueDate,
+            CreateDate = e.CreateDate,
+            UserId = e.UserId!,
+            AssignedUserId = e.AssignedUserId,
+            Status = e.Status,
+            TodoListId = e.TodoListId
+        });
+    }
+
     public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByTitleAsync(int page, int pageSize, string? userId, string title)
     {
         var query = this._todoListContext.TodoTasks.AsQueryable();

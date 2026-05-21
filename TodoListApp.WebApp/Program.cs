@@ -3,6 +3,7 @@ using TodoListApp.Services.Interfaces;
 using TodoListApp.Services.WebApi.Services;
 using Microsoft.EntityFrameworkCore;
 using TodoListApp.Services.Database.DbContexts;
+using TodoListApp.WebApp.Services.Email;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,6 +37,7 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>()
     .AddEntityFrameworkStores<IdentityDbContext>()
     .AddDefaultTokenProviders();
 
+builder.Services.AddScoped<EmailService>();
 
 builder.Services.AddControllersWithViews();
 

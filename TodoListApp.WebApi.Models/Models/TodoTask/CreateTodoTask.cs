@@ -14,7 +14,9 @@ public class CreateTodoTask
     public string Description { get; set; } = string.Empty;
 
     [Required]
-    public DateTime DueDate { get; set; }
+    [DataType(DataType.DateTime)]
+    [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
+    public DateTime DueDate { get; set; } = DateTime.Now;
 
     public string UserId { get; set; } = string.Empty;
 

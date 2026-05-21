@@ -144,4 +144,22 @@ public class TodoTaskWebApiService : ITodoTaskService
         var response = await this.httpClient.DeleteAsync(uri);
         return response.IsSuccessStatusCode;
     }
+
+    public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByDateRangeAsync(int page, int pageSize, string? userId, DateTime fromDate, DateTime toDate)
+    {
+        var query =
+            $"TodoTask/by-date-range?" +
+            $"page={page}" +
+            $"&pageSize={pageSize}" +
+            $"&fromDate={fromDate:O}" +
+            $"&toDate={toDate:O}";
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            query += $"&userId={Uri.EscapeDataString(userId)}";
+        }
+
+        var result = await this.SafeGetAsync<IEnumerable<ModelTodoTask>>(query);
+        return result ?? Enumerable.Empty<ModelTodoTask>();
+    }
 }

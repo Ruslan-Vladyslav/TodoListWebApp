@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using TodoListApp.Services.Interfaces;
-using TodoListApp.WebApi.Models.Models.TodoTag;
 using TodoListApp.WebApi.Models.Models.TodoTask;
+using TodoListApp.WebApp.Models;
 
 namespace TodoListApp.WebApp.Controllers;
 
@@ -10,36 +11,42 @@ namespace TodoListApp.WebApp.Controllers;
 public class TodoTagController : Controller
 {
     private readonly ITodoTagService _todoTagService;
+    private readonly UserManager<IdentityUser> _userManager;
 
-    public TodoTagController(ITodoTagService todoTagService)
+    public TodoTagController(ITodoTagService todoTagService, UserManager<IdentityUser> userManager)
     {
         this._todoTagService = todoTagService;
+        this._userManager = userManager;
     }
 
-    [HttpGet]
-    public async Task<IActionResult> GetTasksByTagPartial(int tagId, int page = 1)
+    public async Task<IActionResult> Index(int? tagId, int page = 1)
     {
-        int pageSize = 6;
-        var allTasks = await this._todoTagService.GetTasksByTagAsync(tagId);
+        var pageSize = 6;
+        var userId = _userManager.GetUserId(User);
+        var tags = await _todoTagService.GetAllTagsAsync(page, pageSize);
 
-        var pagedTasks = allTasks.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+        var all = tagId.HasValue
+            ? await _todoTagService.GetTasksByTagAsync(tagId.Value)
+            : Enumerable.Empty<ModelTodoTask>();
+        all = all.Where(t => t.UserId == userId);
 
-        ViewBag.CurrentPage = page;
-        ViewBag.TotalPages = (int)Math.Ceiling(allTasks.Count() / (double)pageSize);
+        var totalPages = (int)Math.Ceiling(all.Count() / (double)pageSize);
 
-        return this.PartialView("_TasksCardsPartial", pagedTasks);
-    }
+        var tasks = all
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
 
-    public async Task<IActionResult> Index()
-    {
-        var tags = await this._todoTagService.GetAllTagsAsync(1, 10);
+        ViewBag.Tags = tags;
 
-        var model = new TagsTasksViewModel
+        return this.View(new TasksPartialViewModel
         {
-            Tags = tags,
-            Tasks = Enumerable.Empty<ModelTodoTask>()
-        };
-
-        return this.View(model);
+            Tasks = tasks,
+            CurrentPage = page,
+            TotalPages = totalPages,
+            TagId = tagId,
+            Action = "Index",
+            Controller = "TodoTag",
+        });
     }
 }

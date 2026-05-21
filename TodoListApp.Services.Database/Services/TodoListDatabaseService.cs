@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using TodoListApp.Services.Database.Entity;
 using TodoListApp.Services.Interfaces;
@@ -68,31 +69,41 @@ public class TodoListDatabaseService : ITodoListService
 
     public async Task<IEnumerable<ModelTodoList>> GetAllListByUserAsync(int page, int pageSize, string userId)
     {
-        var items = await this.todoListContext.TodoLists
-             .Where(t => t.UserId == userId)
-             .OrderBy(t => t.Title)
-             .Skip((page - 1) * pageSize)
-             .Take(pageSize)
-             .ToListAsync();
+        var query = this.todoListContext.TodoLists
+            .Where(t => t.UserId == userId)
+            .OrderBy(t => t.Title)
+            .Select(t => new ModelTodoList
+            {
+                Id = t.Id,
+                Title = t.Title,
+                Description = t.Description,
+                UserId = t.UserId,
 
-        return items.Select(e => new ModelTodoList
-        {
-            Id = e.Id,
-            Title = e.Title,
-            Description = e.Description,
-            UserId = e.UserId,
-        });
+                TaskCount = t.TodoTasks.Count()
+            });
+
+        var paged = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return paged;
     }
 
     public async Task<ModelTodoList?> GetByIdListAsync(int id)
     {
-        var entity = await this.todoListContext.TodoLists.FindAsync(id) ?? throw new NotFoundException($"TodoList with id {id} not found.");
+        var entity = await this.todoListContext.TodoLists
+            .Include(x => x.TodoTasks)
+            .FirstOrDefaultAsync(x => x.Id == id)
+            ?? throw new NotFoundException($"TodoList with id {id} not found.");
+
         return new ModelTodoList
         {
             Id = entity.Id,
             Title = entity.Title,
             Description = entity.Description,
             UserId = entity.UserId,
+            TaskCount = entity.TodoTasks.Count,
         };
     }
 
@@ -108,7 +119,6 @@ public class TodoListDatabaseService : ITodoListService
 
         entity.Title = item.Title!;
         entity.Description = item.Description;
-        entity.UserId = item.UserId;
 
         _ = this.todoListContext.TodoLists.Update(entity);
         _ = await this.todoListContext.SaveChangesAsync();

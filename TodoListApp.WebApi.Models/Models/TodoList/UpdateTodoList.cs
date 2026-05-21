@@ -12,6 +12,4 @@ public class UpdateTodoList
 
     [MaxLength(500, ErrorMessage = "Description must not be more than 500 characters.")]
     public string Description { get; set; } = string.Empty;
-
-    public string? UserId { get; set; }
 }

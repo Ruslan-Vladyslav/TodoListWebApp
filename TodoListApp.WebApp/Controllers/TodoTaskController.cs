@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -7,6 +8,7 @@ using TodoListApp.Services.Enums;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.WebApi.Models.Models.TodoComment;
 using TodoListApp.WebApi.Models.Models.TodoTask;
+using TodoListApp.WebApp.Models;
 
 namespace TodoListApp.WebApp.Controllers;
 
@@ -43,8 +45,17 @@ public class TodoTaskController : Controller
             statusFilter = (TodoTaskStatus)statusId.Value;
         }
 
-        var UserName = User.Identity?.Name;
-        var allTasks = await this._todoTaskService.GetAllTasksAsync(1, int.MaxValue, null, UserName, statusFilter, sortBy);
+        var userId = _userManager.GetUserId(User);
+        var allTasks = await this._todoTaskService.GetAllTasksAsync(1, int.MaxValue, null, userId, statusFilter, sortBy);
+
+        foreach (var task in allTasks)
+        {
+            if (!string.IsNullOrEmpty(task.UserId))
+            {
+                var user = await _userManager.FindByIdAsync(task.UserId);
+                task.UserName = user?.UserName;
+            }
+        }
 
         var pagedTasks = allTasks
             .Skip((page - 1) * this.pageSize)
@@ -67,7 +78,11 @@ public class TodoTaskController : Controller
         this.ViewBag.StatusFilter = new SelectList(
             Enum.GetValues(typeof(TodoTaskStatus))
                 .Cast<TodoTaskStatus>()
-                .Select(e => new { Id = (int)e, Name = e.ToString() }),
+                .Select(e => new
+                {
+                    Id = (int)e,
+                    Name = Regex.Replace(e.ToString(), "(\\B[A-Z])", " $1")
+                }),
             "Id",
             "Name",
             statusId
@@ -86,22 +101,25 @@ public class TodoTaskController : Controller
     {
         var task = await this._todoTaskService.GetByIdTaskAsync(id);
 
-        var UserName = User.Identity?.Name;
-        task.AssignedUserId = UserName;
-        task.UserId = UserName!;
-
         if (task == null)
         {
             return this.NotFound();
         }
+
+        if (!string.IsNullOrEmpty(task.UserId))
+        {
+            var user = await _userManager.FindByIdAsync(task.UserId);
+            task.UserName = user!.UserName;
+        }
+
         return this.View(task);
     }
 
     public async Task<IActionResult> Create(int? todoListId)
     {
-        var UserName = User.Identity?.Name;
+        var userId = _userManager.GetUserId(User);
 
-        this.ViewBag.ToDoLists = new SelectList(await this._todoListService.GetAllListByUserAsync(1, 100, UserName), "Id", "Title");
+        this.ViewBag.ToDoLists = new SelectList(await this._todoListService.GetAllListByUserAsync(1, 100, userId), "Id", "Title");
 
         var model = new CreateTodoTask();
 
@@ -110,8 +128,8 @@ public class TodoTaskController : Controller
             model.TodoListId = todoListId.Value;
         }
 
-        model.UserId = UserName;
-        model.AssignedUserId = UserName;
+        model.UserId = userId;
+        model.AssignedUserId = userId;
 
         return this.View(model);
     }
@@ -120,7 +138,7 @@ public class TodoTaskController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CreateTodoTask model)
     {
-        var UserName = User.Identity?.Name;
+        var UserName = _userManager.GetUserId(User);
 
         if (!this.ModelState.IsValid)
         {
@@ -143,49 +161,90 @@ public class TodoTaskController : Controller
 
     public async Task<IActionResult> Edit(int id)
     {
-        var task = await this._todoTaskService.GetByIdTaskAsync(id);
+        var task = await _todoTaskService.GetByIdTaskAsync(id);
 
         if (task == null)
         {
-            return this.NotFound();
+            return NotFound();
         }
 
-        if (task.UserId != User.Identity!.Name)
+        var userId = _userManager.GetUserId(User);
+
+        if (task.UserId != userId)
         {
-            return this.Forbid();
+            return Forbid();
         }
 
-        var UserName = User.Identity?.Name;
+        var ownerUser = await _userManager.FindByIdAsync(task.UserId);
 
-        this.ViewBag.ToDoLists = new SelectList(await this._todoListService.GetAllListByUserAsync(1, 10, UserName!), "Id", "Title", task.TodoListId);
-        this.ViewBag.Tags = new SelectList(await this._todoTagService.GetAllTagsAsync(1, 10), "Id", "Name");
-        this.ViewBag.Statuses = new SelectList(
+        IdentityUser? assignedUser = null;
+
+        if (!string.IsNullOrEmpty(task.AssignedUserId))
+        {
+            assignedUser =
+                await _userManager.FindByIdAsync(task.AssignedUserId);
+        }
+
+        ViewBag.ToDoLists = new SelectList(
+            await _todoListService.GetAllListByUserAsync(
+                1,
+                10,
+                userId!),
+            "Id",
+            "Title",
+            task.TodoListId);
+
+        ViewBag.Tags = new SelectList(
+            await _todoTagService.GetAllTagsAsync(1, 10),
+            "Id",
+            "Name");
+
+        ViewBag.Statuses = new SelectList(
             Enum.GetValues(typeof(TodoTaskStatus))
                 .Cast<TodoTaskStatus>()
-                .Select(e => new { Id = (int)e, Name = e.ToString() }),
+                .Select(e => new
+                {
+                    Id = (int)e,
+                    Name = Regex.Replace(
+                        e.ToString(),
+                        "(\\B[A-Z])",
+                        " $1")
+                }),
             "Id",
             "Name",
-            task.Status
-        );
+            task.Status);
 
         var model = new UpdateTodoTask
         {
             Id = task.Id,
             Title = task.Title,
             Description = task.Description,
-            DueDate = task.DueDate,
+
+            DueDate = task.DueDate.ToLocalTime(),
+
             Status = task.Status,
+
             UserId = task.UserId,
+            UserName = ownerUser?.UserName,
+
             AssignedUserId = task.AssignedUserId,
+            AssignedUserName = assignedUser?.UserName,
+
             TodoListId = task.TodoListId,
+
             Tags = task.Tags,
             Comments = task.Comments
         };
 
-        var allUsers = await this._userManager.Users.ToListAsync();
-        this.ViewBag.Users = new SelectList(allUsers, "Id", "UserName", model.AssignedUserId);
+        var allUsers = await _userManager.Users.ToListAsync();
 
-        return this.View(model);
+        ViewBag.Users = new SelectList(
+            allUsers,
+            "Id",
+            "UserName",
+            model.AssignedUserId);
+
+        return View(model);
     }
 
     [HttpPost]
@@ -199,7 +258,11 @@ public class TodoTaskController : Controller
             this.ViewBag.Statuses = new SelectList(
                 Enum.GetValues(typeof(TodoTaskStatus))
                     .Cast<TodoTaskStatus>()
-                    .Select(e => new { Id = (int)e, Name = e.ToString() }),
+                    .Select(e => new
+                    {
+                        Id = (int)e,
+                        Name = Regex.Replace(e.ToString(), "(\\B[A-Z])", " $1")
+                    }),
                 "Id",
                 "Name",
                 model.Status
@@ -212,6 +275,7 @@ public class TodoTaskController : Controller
             return this.View(model);
         }
 
+        model.DueDate = model.DueDate.ToUniversalTime();
         await this._todoTaskService.UpdateTaskAsync(id, model);
         return this.RedirectToAction(nameof(Index));
     }
@@ -278,9 +342,11 @@ public class TodoTaskController : Controller
             return this.NotFound();
         }
 
-        if (task.UserId != User.Identity!.Name)
+        var userId = _userManager.GetUserId(User);
+
+        if (task.UserId != userId)
         {
-            return this.Forbid();
+            return Forbid();
         }
 
         return this.View(task);
@@ -295,87 +361,122 @@ public class TodoTaskController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Search(string? searchType = "Title", int page = 1)
+    public async Task<IActionResult> Search(
+        string searchType = "Title",
+        string? title = null,
+        DateTime? createDate = null,
+        DateTime? dueDate = null,
+        DateTime? fromDate = null,
+        DateTime? toDate = null,
+        int? tagId = null,
+        int page = 1)
     {
+        var userId = _userManager.GetUserId(User);
+        var pageSize = 6;
+
         var tags = await _todoTagService.GetAllTagsAsync(1, pageSize);
-        ViewBag.SearchTypeOptions = new SelectList(new[]
-        {
-        new SelectListItem { Text = "Title", Value = "Title" },
-        new SelectListItem { Text = "Creation Date", Value = "CreationDate" },
-        new SelectListItem { Text = "Due Date", Value = "DueDate" },
-        new SelectListItem { Text = "Tag", Value = "Tag" }
-    }, "Value", "Text", searchType);
-
-        ViewBag.Tags = new SelectList(tags, "Id", "Name");
-        ViewBag.Page = page;
-        ViewBag.TotalPages = 0;
-
-        return View(new SearchTasksViewModel { SearchType = searchType ?? "Title" });
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> Search(SearchTasksViewModel model, int page = 1)
-    {
-        var UserName = User.Identity!.Name;
-        var tags = await _todoTagService.GetAllTagsAsync(1, pageSize);
-
-        ViewBag.SearchTypeOptions = new SelectList(new[]
-        {
-        new SelectListItem { Text = "Title", Value = "Title" },
-        new SelectListItem { Text = "Creation Date", Value = "CreationDate" },
-        new SelectListItem { Text = "Due Date", Value = "DueDate" },
-        new SelectListItem { Text = "Tag", Value = "Tag" }
-    }, "Value", "Text", model.SearchType);
-
-        ViewBag.Tags = new SelectList(tags, "Id", "Name");
 
         IEnumerable<ModelTodoTask> allResults = Enumerable.Empty<ModelTodoTask>();
 
-        switch (model.SearchType)
+        ViewBag.SearchTypeOptions = new SelectList(new[]
+        {
+            new SelectListItem { Text = "Title", Value = "Title" },
+            new SelectListItem { Text = "Creation Date", Value = "CreationDate" },
+            new SelectListItem { Text = "Due Date", Value = "DueDate" },
+            new SelectListItem { Text = "Tag", Value = "Tag" },
+            new SelectListItem { Text = "Date Range", Value = "DateRange" }
+        }, "Value", "Text", searchType);
+
+        switch (searchType)
         {
             case "Title":
-                if (!string.IsNullOrWhiteSpace(model.Title))
+                if (!string.IsNullOrWhiteSpace(title))
                 {
-                    allResults = await _todoTaskService.GetAllTasksByTitleAsync(1, int.MaxValue, UserName, model.Title);
+                    allResults = await _todoTaskService.GetAllTasksByTitleAsync(1, int.MaxValue, userId, title);
                 }
+
                 break;
 
             case "CreationDate":
-                if (model.CreateDate.HasValue)
+                if (createDate.HasValue)
                 {
-                    allResults = await _todoTaskService.GetAllTasksByCreateDateAsync(1, int.MaxValue, UserName, model.CreateDate.Value);
+                    allResults = await _todoTaskService.GetAllTasksByCreateDateAsync(1, int.MaxValue, userId, createDate.Value);
                 }
+
                 break;
 
             case "DueDate":
-                if (model.DueDate.HasValue)
+                if (dueDate.HasValue)
                 {
-                    allResults = await _todoTaskService.GetAllTasksByDueDateAsync(1, int.MaxValue, UserName, model.DueDate.Value);
+                    allResults = await _todoTaskService.GetAllTasksByDueDateAsync(1, int.MaxValue, userId, dueDate.Value);
+                }
+
+                break;
+
+            case "DateRange":
+                if (fromDate.HasValue && toDate.HasValue)
+                {
+                    allResults =
+                        await _todoTaskService.GetAllTasksByDateRangeAsync(
+                            1,
+                            int.MaxValue,
+                            userId,
+                            fromDate.Value,
+                            toDate.Value);
                 }
                 break;
 
             case "Tag":
-                if (model.TagId.HasValue)
+                if (tagId.HasValue)
                 {
-                    allResults = await _todoTagService.GetTasksByTagAsync(model.TagId.Value);
+                    allResults = await _todoTagService.GetTasksByTagAsync(tagId.Value);
                 }
+
                 break;
             default:
                 break;
         }
 
-        var pagedResults = allResults.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-
         ViewBag.Page = page;
         ViewBag.TotalPages = (int)Math.Ceiling(allResults.Count() / (double)pageSize);
 
-        model.Results = pagedResults;
-        return View(model);
+        ViewBag.SearchType = searchType;
+        ViewBag.Title = title;
+        ViewBag.CreateDate = createDate;
+        ViewBag.DueDate = dueDate;
+        ViewBag.TagId = tagId;
+
+        ViewBag.Tags = new SelectList(tags, "Id", "Name");
+
+        var paged = allResults
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        var totalPages = (int)Math.Ceiling(allResults.Count() / (double)pageSize);
+
+        var vm = new TasksPartialViewModel
+        {
+            Tasks = paged,
+            CurrentPage = page,
+            TotalPages = totalPages,
+            SearchType = searchType,
+            TagId = tagId,
+            Title = title,
+            CreateDate = createDate,
+            DueDate = dueDate,
+            FromDate = fromDate,
+            ToDate = toDate,
+            Action = "Search",
+            Controller = "TodoTask",
+        };
+
+        return View(vm);
     }
 
     public async Task<ActionResult> TasksByList(int todoListId, int page = 1, string? sortBy = null)
     {
-        var UserName = User.Identity!.Name;
+        var UserName = _userManager.GetUserId(User);
 
         if (!this.ModelState.IsValid)
         {

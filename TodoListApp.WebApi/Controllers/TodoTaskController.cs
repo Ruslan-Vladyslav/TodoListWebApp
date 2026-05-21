@@ -115,6 +115,29 @@ public class TodoTaskController : ControllerBase
         return this.Ok(tasks);
     }
 
+    [HttpGet("by-date-range")]
+    public async Task<IActionResult> GetTasksByDateRange(
+        int page = 1,
+        int pageSize = 10,
+        string? userId = null,
+        DateTime? fromDate = null,
+        DateTime? toDate = null)
+    {
+        if (fromDate == null || toDate == null)
+        {
+            return this.BadRequest("Both dates are required.");
+        }
+
+        var tasks = await this._service.GetAllTasksByDateRangeAsync(
+            page,
+            pageSize,
+            userId,
+            fromDate.Value,
+            toDate.Value);
+
+        return this.Ok(tasks);
+    }
+
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteTask(int id)
     {

@@ -18,14 +18,19 @@ public class UpdateTodoTask
     public string? Description { get; set; }
 
     [Required]
-    [DataType(DataType.Date)]
+    [DataType(DataType.DateTime)]
+    [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
     public DateTime DueDate { get; set; }
 
     public TodoTaskStatus Status { get; set; }
 
     public string UserId { get; set; } = string.Empty;
 
+    public string? UserName { get; set; }
+
     public string? AssignedUserId { get; set; }
+
+    public string? AssignedUserName { get; set; }
 
     public int TodoListId { get; set; }
 
