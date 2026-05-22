@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using TodoListApp.Services.Database.Entity;
 using TodoListApp.Services.Interfaces;
@@ -53,6 +52,7 @@ public class TodoListDatabaseService : ITodoListService
     public async Task<IEnumerable<ModelTodoList>> GetAllListAsync(int page, int pageSize)
     {
         var items = await this.todoListContext.TodoLists
+            .Include(x => x.Accesses)
             .OrderBy(t => t.Title)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -64,13 +64,16 @@ public class TodoListDatabaseService : ITodoListService
             Title = e.Title,
             Description = e.Description,
             UserId = e.UserId,
+            TaskCount = e.TodoTasks.Count,
         });
     }
 
     public async Task<IEnumerable<ModelTodoList>> GetAllListByUserAsync(int page, int pageSize, string userId)
     {
         var query = this.todoListContext.TodoLists
-            .Where(t => t.UserId == userId)
+             .Where(l =>
+                l.UserId == userId ||
+                l.Accesses.Any(a => a.TargetUserId == userId))
             .OrderBy(t => t.Title)
             .Select(t => new ModelTodoList
             {
@@ -78,8 +81,7 @@ public class TodoListDatabaseService : ITodoListService
                 Title = t.Title,
                 Description = t.Description,
                 UserId = t.UserId,
-
-                TaskCount = t.TodoTasks.Count()
+                TaskCount = t.TodoTasks.Count(),
             });
 
         var paged = await query
@@ -93,9 +95,9 @@ public class TodoListDatabaseService : ITodoListService
     public async Task<ModelTodoList?> GetByIdListAsync(int id)
     {
         var entity = await this.todoListContext.TodoLists
-            .Include(x => x.TodoTasks)
-            .FirstOrDefaultAsync(x => x.Id == id)
-            ?? throw new NotFoundException($"TodoList with id {id} not found.");
+           .Include(x => x.TodoTasks)
+           .FirstOrDefaultAsync(x => x.Id == id)
+           ?? throw new NotFoundException($"TodoList with id {id} not found.");
 
         return new ModelTodoList
         {

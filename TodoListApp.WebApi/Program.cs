@@ -16,6 +16,9 @@ builder.Services.AddScoped<ITodoListService, TodoListDatabaseService>();
 builder.Services.AddScoped<ITodoTaskService, TodoTaskDatabaseService>();
 builder.Services.AddScoped<ITodoTagService, TodoTagDatabaseService>();
 builder.Services.AddScoped<ITodoCommentService, TodoCommentDatabaseService>();
+builder.Services.AddScoped<IAccessService, AccessDatabaseService>();
+builder.Services.AddScoped<IInvitationService, InvitationDatabaseService>();
+builder.Services.AddScoped<INotificationService, NotificationDatabaseService>();
 
 
 builder.Services.AddEndpointsApiExplorer();

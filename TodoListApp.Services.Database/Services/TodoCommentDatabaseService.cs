@@ -18,13 +18,18 @@ public class TodoCommentDatabaseService : ITodoCommentService
     {
         ArgumentNullException.ThrowIfNull(comment);
 
-        _ = await this.context.TodoTasks.FindAsync(taskId)
-            ?? throw new KeyNotFoundException($"TodoTask with id {taskId} not found.");
+        var taskExists = await context.TodoTasks
+            .AnyAsync(t => t.Id == taskId);
+
+        if (!taskExists)
+        {
+            throw new KeyNotFoundException($"TodoTask {taskId} not found");
+        }
 
         var entity = new TodoCommentEntity
         {
             Text = comment.Text,
-            CreateDate = DateTime.Now,
+            CreateDate = DateTime.UtcNow,
             UserId = comment.UserId,
             TodoTaskId = taskId,
         };
@@ -45,9 +50,13 @@ public class TodoCommentDatabaseService : ITodoCommentService
     public async Task<ModelTodoComment?> GetCommentByIdAsync(int id)
     {
         var entity = await this.context.TodoComments
-            .Include(c => c.TodoTask)
-            .FirstOrDefaultAsync(c => c.Id == id)
-            ?? throw new KeyNotFoundException($"TodoComment with id {id} not found.");
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id);
+
+        if (entity == null)
+        {
+            throw new KeyNotFoundException($"TodoComment with id {id} not found.");
+        }
 
         return new ModelTodoComment
         {

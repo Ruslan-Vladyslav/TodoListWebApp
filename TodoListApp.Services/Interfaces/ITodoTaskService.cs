@@ -5,17 +5,19 @@ namespace TodoListApp.Services.Interfaces;
 
 public interface ITodoTaskService
 {
-    Task<ModelTodoTask?> GetByIdTaskAsync(int id);
-
     Task<ModelTodoTask> CreateTaskAsync(CreateTodoTask item);
 
-    Task UpdateTaskAsync(int id, UpdateTodoTask item);
+    Task<ModelTodoTask?> GetByIdTaskAsync(int id, string userId);
 
-    Task DeleteTaskAsync(int id);
+    Task<IEnumerable<ModelTodoTask>> GetByListIdAsync(int todoListId, string userId);
 
-    Task<IEnumerable<ModelTodoTask>> GetByListIdAsync(int todoListId);
-
-    Task<IEnumerable<ModelTodoTask>> GetAllTasksAsync(int page, int pageSize, int? toDoListId, string? userId, TodoTaskStatus? status, string? sort);
+    Task<IEnumerable<ModelTodoTask>> GetAllTasksAsync(
+        int page,
+        int pageSize,
+        int? todoListId,
+        string? userId,
+        TodoTaskStatus? status,
+        string? sort);
 
     Task<IEnumerable<ModelTodoTask>> GetAllTasksByTitleAsync(int page, int pageSize, string? userId, string title);
 
@@ -23,5 +25,14 @@ public interface ITodoTaskService
 
     Task<IEnumerable<ModelTodoTask>> GetAllTasksByDueDateAsync(int page, int pageSize, string? userId, DateTime dueDate);
 
-    Task<IEnumerable<ModelTodoTask>> GetAllTasksByDateRangeAsync(int page, int pageSize, string? userId, DateTime fromDate, DateTime toDate);
+    Task<IEnumerable<ModelTodoTask>> GetAllTasksByDateRangeAsync(
+        int page,
+        int pageSize,
+        string? userId,
+        DateTime fromDate,
+        DateTime toDate);
+
+    Task UpdateTaskAsync(int id, UpdateTodoTask item, string userId);
+
+    Task DeleteTaskAsync(int id, string userId);
 }
