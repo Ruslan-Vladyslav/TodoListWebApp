@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.WebApi.Models.Enums;
+using TodoListApp.WebApi.Models.Models.Invitation;
 
 namespace TodoListApp.Services.Database.Services;
 
@@ -129,6 +130,7 @@ public class InvitationDatabaseService : IInvitationService
 
         await _accessService
             .GrantAccessAsync(
+                invite.SenderUserId,
                 invite.ReceiverUserId,
                 invite.TodoListId,
                 invite.Role);
@@ -167,4 +169,27 @@ public class InvitationDatabaseService : IInvitationService
 
         await _context.SaveChangesAsync();
     }
+
+    public async Task<IEnumerable<ModelInvitation>> GetUserInvitationsAsync(string userId)
+    {
+        return await _context.TodoInvitations
+            .Include(x => x.TodoList)
+            .Where(x => x.ReceiverUserId == userId)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync()
+            .ContinueWith(t => t.Result.Select(x => new ModelInvitation
+            {
+                Id = x.Id,
+                TodoListId = x.TodoListId,
+                TodoListTitle = x.TodoList.Title,
+
+                SenderUserId = x.SenderUserId,
+                ReceiverUserId = x.ReceiverUserId,
+
+                Role = x.Role,
+                Status = x.Status,
+                Message = x.Message,
+                CreatedAt = x.CreatedAt
+            }));
+}
 }

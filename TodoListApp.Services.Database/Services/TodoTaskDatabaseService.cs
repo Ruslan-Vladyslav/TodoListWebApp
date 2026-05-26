@@ -30,7 +30,7 @@ public class TodoTaskDatabaseService : ITodoTaskService
             Title = item.Title,
             Description = item.Description,
             DueDate = item.DueDate,
-            CreateDate = DateTime.UtcNow,
+            CreateDate = DateTime.Now,
             CreatedByUserId = item.UserId,
             AssignedToUserId = item.AssignedUserId,
             AssignedByUserId = item.UserId,
@@ -130,6 +130,7 @@ public class TodoTaskDatabaseService : ITodoTaskService
         entity.Description = item.Description;
         entity.DueDate = item.DueDate;
         entity.Status = item.Status;
+        entity.TodoListId = item.TodoListId;
 
         if (item.AssignedUserId != entity.AssignedToUserId)
         {
@@ -158,13 +159,43 @@ public class TodoTaskDatabaseService : ITodoTaskService
     public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByCreateDateAsync(
         int page, int pageSize, string? userId, DateTime createDate)
     {
-        return await FilterByDate(t => t.CreateDate, page, pageSize, userId, createDate);
+        var query = _context.TodoTasks.AsNoTracking();
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            query = query.Where(t => t.CreatedByUserId == userId);
+        }
+
+        query = query.Where(t => t.CreateDate.Date == createDate.Date);
+
+        var items = await query
+            .OrderBy(t => t.CreateDate)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return items.Select(Map);
     }
 
     public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByDueDateAsync(
         int page, int pageSize, string? userId, DateTime dueDate)
     {
-        return await FilterByDate(t => t.DueDate, page, pageSize, userId, dueDate);
+        var query = _context.TodoTasks.AsNoTracking();
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            query = query.Where(t => t.CreatedByUserId == userId);
+        }
+
+        query = query.Where(t => t.DueDate.Date == dueDate.Date);
+
+        var items = await query
+            .OrderBy(t => t.DueDate)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return items.Select(Map);
     }
 
     public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByDateRangeAsync(
@@ -244,16 +275,6 @@ public class TodoTaskDatabaseService : ITodoTaskService
 
             _ => query.OrderBy(x => x.DueDate)
         };
-    }
-
-    private static async Task<IEnumerable<ModelTodoTask>> FilterByDate(
-        Func<TodoTaskEntity, DateTime> selector,
-        int page,
-        int pageSize,
-        string? userId,
-        DateTime date)
-    {
-        throw new NotImplementedException("Use EF query version instead (optimization required)");
     }
 
     private static ModelTodoTask Map(TodoTaskEntity e)

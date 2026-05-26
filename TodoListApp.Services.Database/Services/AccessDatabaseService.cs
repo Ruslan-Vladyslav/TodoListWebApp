@@ -39,7 +39,7 @@ public class AccessDatabaseService : IAccessService
             ));
     }
 
-    public async Task GrantAccessAsync(string userId, int listId, TodoListRole role)
+    public async Task GrantAccessAsync(string ownerUserId, string userId, int listId, TodoListRole role)
     {
         var exists = await _context.TodoListAccesses.AnyAsync(x =>
             x.TodoListId == listId &&
@@ -53,6 +53,7 @@ public class AccessDatabaseService : IAccessService
         var entity = new TodoListAccessEntity
         {
             TodoListId = listId,
+            OwnerUserId = ownerUserId,
             TargetUserId = userId,
             Role = role,
             SharedAt = DateTime.UtcNow
