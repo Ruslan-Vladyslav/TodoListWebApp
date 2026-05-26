@@ -24,5 +24,6 @@ public class CreateTodoTask
 
     public TodoTaskStatus Status { get; set; }
 
+    [Required(ErrorMessage = "Please select a Todo List")]
     public int TodoListId { get; set; }
 }
