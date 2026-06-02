@@ -1,165 +1,172 @@
-//using System.Net.Http.Json;
-//using TodoListApp.Services.Enums;
-//using TodoListApp.Services.Interfaces;
-//using TodoListApp.WebApi.Models.Models.TodoTask;
+using System.Net.Http.Json;
+using TodoListApp.Services.Enums;
+using TodoListApp.Services.Interfaces;
+using TodoListApp.WebApi.Models.Models.TodoTask;
 
-//namespace TodoListApp.Services.WebApi.Services;
+namespace TodoListApp.Services.WebApi.Services;
 
-//public class TodoTaskWebApiService : ITodoTaskService
-//{
-//    private readonly HttpClient httpClient;
+public class TodoTaskWebApiService : ITodoTaskService
+{
+    private const string BaseRoute = "TodoTask";
+    private readonly HttpClient httpClient;
 
-//    public TodoTaskWebApiService(HttpClient client)
-//    {
-//        this.httpClient = client;
-//    }
+    public TodoTaskWebApiService(HttpClient client)
+    {
+        this.httpClient = client;
+    }
 
-//    public Task<ModelTodoTask> CreateTaskAsync(CreateTodoTask item)
-//    {
-//        return this.SafePostAsync<ModelTodoTask>("TodoTask", item)!;
-//    }
+    public Task<ModelTodoTask> CreateTaskAsync(CreateTodoTask item)
+    {
+        return SendAsync<ModelTodoTask>(() =>
+                    httpClient.PostAsJsonAsync(BaseRoute, item));
+    }
 
-//    public Task DeleteTaskAsync(int id)
-//    {
-//        return this.SafeDeleteAsync($"TodoTask/{id}");
-//    }
+    public Task DeleteTaskAsync(int id, string userId)
+    {
+        return SendNoContentAsync(() =>
+                httpClient.DeleteAsync($"{BaseRoute}/{id}?userId={userId}"));
+    }
 
-//    public async Task<IEnumerable<ModelTodoTask>> GetAllTasksAsync(int page, int pageSize, int? toDoListId, string? userId, TodoTaskStatus? status, string? sort)
-//    {
-//        var query = $"TodoTask?page={page}&pageSize={pageSize}";
+    public async Task<IEnumerable<ModelTodoTask>> GetAllTasksAsync(
+        int page,
+        int pageSize,
+        int? todoListId,
+        string? userId,
+        TodoTaskStatus? status,
+        string? sort)
+    {
+        var query = $"{BaseRoute}?page={page}&pageSize={pageSize}";
 
-//        if (toDoListId.HasValue)
-//        {
-//            query += $"&listId={toDoListId}";
-//        }
+        if (todoListId.HasValue)
+        {
+            query += $"&listId={todoListId.Value}";
+        }
 
-//        if (!string.IsNullOrEmpty(userId))
-//        {
-//            query += $"&userId={userId}";
-//        }
+        if (!string.IsNullOrEmpty(userId))
+        {
+            query += $"&userId={Uri.EscapeDataString(userId)}";
+        }
 
-//        if (status.HasValue)
-//        {
-//            query += $"&status={(int)status.Value}";
-//        }
+        if (status.HasValue)
+        {
+            query += $"&status={(int)status.Value}";
+        }
 
-//        if (!string.IsNullOrEmpty(sort))
-//        {
-//            query += $"&sort={Uri.EscapeDataString(sort)}";
-//        }
+        if (!string.IsNullOrEmpty(sort))
+        {
+            query += $"&sort={Uri.EscapeDataString(sort)}";
+        }
 
-//        var result = await this.SafeGetAsync<IEnumerable<ModelTodoTask>>(query);
-//        return result ?? Enumerable.Empty<ModelTodoTask>();
-//    }
+        var result = await SendAsync<IEnumerable<ModelTodoTask>>(
+            () => httpClient.GetAsync(query));
 
-//    public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByCreateDateAsync(int page, int pageSize, string? userId, DateTime createDate)
-//    {
-//        var query = $"TodoTask/by-create?page={page}&pageSize={pageSize}&date={createDate:O}";
+        return result ?? Enumerable.Empty<ModelTodoTask>();
+    }
 
-//        if (!string.IsNullOrEmpty(userId))
-//        {
-//            query += $"&userId={userId}";
-//        }
+    public Task<ModelTodoTask?> GetByIdTaskAsync(int id, string userId)
+    {
+        return SendAsync<ModelTodoTask>(() =>
+                httpClient.GetAsync($"{BaseRoute}/{id}?userId={userId}"));
+    }
 
-//        var result = await this.SafeGetAsync<IEnumerable<ModelTodoTask>>(query);
-//        return result ?? Enumerable.Empty<ModelTodoTask>();
-//    }
+    public Task UpdateTaskAsync(int id, UpdateTodoTask item, string userId)
+    {
+        return SendNoContentAsync(() =>
+                httpClient.PutAsJsonAsync($"{BaseRoute}/{id}?userId={userId}", item));
+    }
 
-//    public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByDueDateAsync(int page, int pageSize, string? userId, DateTime dueDate)
-//    {
-//        var query = $"TodoTask/by-due?page={page}&pageSize={pageSize}&date={dueDate:O}";
+    public Task<IEnumerable<ModelTodoTask>> GetByListIdAsync(int todoListId, string userId)
+    {
+        return SendListAsync<ModelTodoTask>(() =>
+            httpClient.GetAsync($"{BaseRoute}/by-list/{todoListId}?userId={Uri.EscapeDataString(userId)}"));
+    }
 
-//        if (!string.IsNullOrEmpty(userId))
-//        {
-//            query += $"&userId={userId}";
-//        }
+    public Task<IEnumerable<ModelTodoTask>> GetAllTasksByCreateDateAsync(
+    int page, int pageSize, string? userId, DateTime createDate)
+    {
+        var query = $"{BaseRoute}/by-create?page={page}&pageSize={pageSize}&date={createDate:O}";
 
-//        var result = await this.SafeGetAsync<IEnumerable<ModelTodoTask>>(query);
-//        return result ?? Enumerable.Empty<ModelTodoTask>();
-//    }
+        if (!string.IsNullOrEmpty(userId))
+        {
+            query += $"&userId={Uri.EscapeDataString(userId)}";
+        }
 
-//    public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByTitleAsync(int page, int pageSize, string? userId, string title)
-//    {
-//        var query = $"TodoTask/by-title?page={page}&pageSize={pageSize}&title={Uri.EscapeDataString(title)}";
+        return SendListAsync<ModelTodoTask>(() =>
+            httpClient.GetAsync(query));
+    }
 
-//        if (!string.IsNullOrEmpty(userId))
-//        {
-//            query += $"&userId={userId}";
-//        }
+    public Task<IEnumerable<ModelTodoTask>> GetAllTasksByDueDateAsync(
+    int page, int pageSize, string? userId, DateTime dueDate)
+    {
+        var query = $"{BaseRoute}/by-due?page={page}&pageSize={pageSize}&date={dueDate:O}";
 
-//        var result = await this.SafeGetAsync<IEnumerable<ModelTodoTask>>(query);
-//        return result ?? Enumerable.Empty<ModelTodoTask>();
-//    }
+        if (!string.IsNullOrEmpty(userId))
+        {
+            query += $"&userId={Uri.EscapeDataString(userId)}";
+        }
 
-//    public Task<ModelTodoTask?> GetByIdTaskAsync(int id)
-//    {
-//        return this.SafeGetAsync<ModelTodoTask>($"TodoTask/{id}");
-//    }
+        return SendListAsync<ModelTodoTask>(() =>
+            httpClient.GetAsync(query));
+    }
 
-//    public Task UpdateTaskAsync(int id, UpdateTodoTask item)
-//    {
-//        return this.SafePutAsync($"TodoTask/{id}", item);
-//    }
+    public Task<IEnumerable<ModelTodoTask>> GetAllTasksByTitleAsync(
+    int page, int pageSize, string? userId, string title)
+    {
+        var query = $"{BaseRoute}/by-title?page={page}&pageSize={pageSize}&title={Uri.EscapeDataString(title)}";
 
-//    public async Task<IEnumerable<ModelTodoTask>> GetByListIdAsync(int todoListId)
-//    {
-//        var result = await this.SafeGetAsync<IEnumerable<ModelTodoTask>>($"TodoTask/by-list/{todoListId}");
-//        return result ?? Enumerable.Empty<ModelTodoTask>();
-//    }
+        if (!string.IsNullOrEmpty(userId))
+        {
+            query += $"&userId={Uri.EscapeDataString(userId)}";
+        }
 
-//    private async Task<T?> SafeGetAsync<T>(string url)
-//    {
-//        var uri = new Uri(this.httpClient.BaseAddress!, url);
-//        var response = await this.httpClient.GetAsync(uri);
+        return SendListAsync<ModelTodoTask>(() => httpClient.GetAsync(query));
+    }
 
-//        if (!response.IsSuccessStatusCode)
-//        {
-//            return default;
-//        }
+    public Task<IEnumerable<ModelTodoTask>> GetAllTasksByDateRangeAsync(
+        int page, int pageSize, string? userId, DateTime fromDate, DateTime toDate)
+    {
+        var query =
+            $"{BaseRoute}/by-date-range?" +
+            $"page={page}&pageSize={pageSize}" +
+            $"&fromDate={fromDate:O}" +
+            $"&toDate={toDate:O}";
 
-//        return await response.Content.ReadFromJsonAsync<T>();
-//    }
+        if (!string.IsNullOrEmpty(userId))
+        {
+            query += $"&userId={Uri.EscapeDataString(userId)}";
+        }
 
-//    private async Task<T?> SafePostAsync<T>(string url, object body)
-//    {
-//        var response = await this.httpClient.PostAsJsonAsync(url, body);
+        return SendListAsync<ModelTodoTask>(() =>
+            httpClient.GetAsync(query));
+    }
 
-//        if (!response.IsSuccessStatusCode)
-//        {
-//            return default;
-//        }
+    private static async Task<T?> SendAsync<T>(Func<Task<HttpResponseMessage>> action)
+    {
+        var response = await action();
 
-//        return await response.Content.ReadFromJsonAsync<T>();
-//    }
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"{response.StatusCode}: {error}");
+        }
 
-//    private async Task<bool> SafePutAsync(string url, object body)
-//    {
-//        var response = await this.httpClient.PutAsJsonAsync(url, body);
-//        return response.IsSuccessStatusCode;
-//    }
+        return await response.Content.ReadFromJsonAsync<T>();
+    }
 
-//    private async Task<bool> SafeDeleteAsync(string url)
-//    {
-//        var uri = new Uri(this.httpClient.BaseAddress!, url);
-//        var response = await this.httpClient.DeleteAsync(uri);
-//        return response.IsSuccessStatusCode;
-//    }
+    private static async Task<IEnumerable<T>> SendListAsync<T>(Func<Task<HttpResponseMessage>> action)
+    {
+        var result = await SendAsync<IEnumerable<T>>(action);
+        return result ?? Enumerable.Empty<T>();
+    }
 
-//    public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByDateRangeAsync(int page, int pageSize, string? userId, DateTime fromDate, DateTime toDate)
-//    {
-//        var query =
-//            $"TodoTask/by-date-range?" +
-//            $"page={page}" +
-//            $"&pageSize={pageSize}" +
-//            $"&fromDate={fromDate:O}" +
-//            $"&toDate={toDate:O}";
+    private static async Task SendNoContentAsync(Func<Task<HttpResponseMessage>> action)
+    {
+        var response = await action();
 
-//        if (!string.IsNullOrEmpty(userId))
-//        {
-//            query += $"&userId={Uri.EscapeDataString(userId)}";
-//        }
-
-//        var result = await this.SafeGetAsync<IEnumerable<ModelTodoTask>>(query);
-//        return result ?? Enumerable.Empty<ModelTodoTask>();
-//    }
-//}
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"{response.StatusCode}: {error}");
+        }
+    }
+}

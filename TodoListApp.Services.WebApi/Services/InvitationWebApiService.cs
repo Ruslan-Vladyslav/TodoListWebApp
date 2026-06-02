@@ -1,0 +1,96 @@
+using System.Net.Http.Json;
+using TodoListApp.Services.Interfaces;
+using TodoListApp.WebApi.Models.Enums;
+using TodoListApp.WebApi.Models.Models.Invitation;
+
+namespace TodoListApp.Services.WebApi.Services;
+
+public class InvitationWebApiService : IInvitationService
+{
+    private const string BaseRoute = "Invitation";
+    private readonly HttpClient httpClient;
+
+    public InvitationWebApiService(HttpClient client)
+    {
+        this.httpClient = client;
+    }
+
+    public async Task SendInvitationAsync(
+        string senderId,
+        string receiverId,
+        int listId,
+        TodoListRole role,
+        string? message = null)
+    {
+        if (string.IsNullOrWhiteSpace(senderId))
+        {
+            throw new ArgumentException("SenderId is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(receiverId))
+        {
+            throw new ArgumentException("ReceiverId is required");
+        }
+
+        var request = new SendInvitationRequest
+        {
+            SenderId = senderId,
+            ReceiverId = receiverId,
+            ListId = listId,
+            Role = role,
+            Message = message,
+        };
+
+        await SendNoContentAsync(() =>
+            this.httpClient.PostAsJsonAsync($"{BaseRoute}/send", request));
+    }
+
+    public async Task AcceptInvitationAsync(int invitationId)
+    {
+        await SendNoContentAsync(() =>
+            httpClient.PostAsync($"{BaseRoute}/accept/{invitationId}", null));
+    }
+
+    public async Task RejectInvitationAsync(int invitationId)
+    {
+        await SendNoContentAsync(() =>
+            httpClient.PostAsync($"{BaseRoute}/reject/{invitationId}", null));
+    }
+
+    public async Task<IEnumerable<ModelInvitation>> GetUserInvitationsAsync(string userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Enumerable.Empty<ModelInvitation>();
+        }
+
+        var result = await SendAsync<IEnumerable<ModelInvitation>>(
+            () => httpClient.GetAsync($"{BaseRoute}/user/{userId}"));
+
+        return result ?? Enumerable.Empty<ModelInvitation>();
+    }
+
+    private static async Task<T?> SendAsync<T>(Func<Task<HttpResponseMessage>> action)
+    {
+        var response = await action();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"{response.StatusCode}: {error}");
+        }
+
+        return await response.Content.ReadFromJsonAsync<T>();
+    }
+
+    private static async Task SendNoContentAsync(Func<Task<HttpResponseMessage>> action)
+    {
+        var response = await action();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"{response.StatusCode}: {error}");
+        }
+    }
+}

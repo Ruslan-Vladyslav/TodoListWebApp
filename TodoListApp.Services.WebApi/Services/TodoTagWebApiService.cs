@@ -7,6 +7,7 @@ namespace TodoListApp.Services.WebApi.Services;
 
 public class TodoTagWebApiService : ITodoTagService
 {
+    private const string BaseRoute = "TodoTag";
     private readonly HttpClient httpClient;
 
     public TodoTagWebApiService(HttpClient client)
@@ -16,79 +17,73 @@ public class TodoTagWebApiService : ITodoTagService
 
     public async Task<IEnumerable<ModelTodoTag>> GetAllTagsAsync(int page, int pageSize)
     {
-        var result = await this.SafeGetAsync<IEnumerable<ModelTodoTag>>($"TodoTag?page={page}&pageSize={pageSize}");
+        var result = await SendAsync<IEnumerable<ModelTodoTag>>(
+           () => httpClient.GetAsync($"{BaseRoute}?page={page}&pageSize={pageSize}"));
+
         return result ?? Enumerable.Empty<ModelTodoTag>();
     }
 
     public Task<ModelTodoTag?> GetByIdTagAsync(int id)
     {
-        return this.SafeGetAsync<ModelTodoTag>($"TodoTag/{id}");
+        return SendAsync<ModelTodoTag>(
+            () => httpClient.GetAsync($"{BaseRoute}/{id}"));
     }
 
-    public async Task<IEnumerable<ModelTodoTask>> GetTasksByTagAsync(int tagId)
-    {
-        var result = await this.SafeGetAsync<IEnumerable<ModelTodoTask>>($"TodoTag/{tagId}/tasks");
-        return result ?? Enumerable.Empty<ModelTodoTask>();
-    }
-
-    public async Task AddTagToTaskAsync(int taskId, int tagId)
-    {
-        var url = $"TodoTag/{tagId}/addTask/{taskId}";
-        var response = await this.httpClient.PostAsync(url, null);
-
-        _ = response.EnsureSuccessStatusCode();
-    }
-
-    public async Task DeleteTagFromTaskAsync(int taskId, int tagId)
-    {
-        _ = await this.SafeDeleteAsync($"TodoTag/{tagId}/removeTask/{taskId}");
-    }
-
-    public async Task<ModelTodoTag> CreateTagAsync(string tagName)
+    public Task<ModelTodoTag> CreateTagAsync(string tagName)
     {
         if (string.IsNullOrWhiteSpace(tagName))
         {
             throw new ArgumentException("Tag name cannot be empty.");
         }
 
-        var newTag = new { Name = tagName };
+        return SendAsync<ModelTodoTag>(
+            () => httpClient.PostAsJsonAsync(
+                BaseRoute,
+                new { Name = tagName }))!;
+    }
 
-        var response = await this.httpClient.PostAsJsonAsync("TodoTag", newTag);
+    public async Task<IEnumerable<ModelTodoTask>> GetTasksByTagAsync(int tagId, string userId)
+    {
+        return await SendAsync<IEnumerable<ModelTodoTask>>(
+            () => httpClient.GetAsync($"{BaseRoute}/{tagId}/tasks"))
+            ?? Enumerable.Empty<ModelTodoTask>();
+    }
+
+    public async Task AddTagToTaskAsync(int taskId, int tagId, string userId)
+    {
+        await SendNoContentAsync(() =>
+            httpClient.PostAsync($"{BaseRoute}/tasks/{taskId}/tags/{tagId}", null));
+    }
+
+    public async Task DeleteTagFromTaskAsync(int taskId, int tagId, string userId)
+    {
+        await SendNoContentAsync(() =>
+            httpClient.DeleteAsync($"{BaseRoute}/tasks/{taskId}/tags/{tagId}"));
+    }
+
+    private static async Task<T?> SendAsync<T>(Func<Task<HttpResponseMessage>> action)
+    {
+        var response = await action();
 
         if (!response.IsSuccessStatusCode)
         {
             var error = await response.Content.ReadAsStringAsync();
-            throw new HttpRequestException($"Failed to create tag. Status: {response.StatusCode}. Message: {error}");
-        }
-
-        var createdTag = await response.Content.ReadFromJsonAsync<ModelTodoTag>();
-
-        if (createdTag == null)
-        {
-            throw new HttpRequestException("Failed to read created tag from API response.");
-        }
-
-        return createdTag;
-    }
-
-    private async Task<T?> SafeGetAsync<T>(string url)
-    {
-        var uri = new Uri(this.httpClient.BaseAddress!, url);
-        var response = await this.httpClient.GetAsync(uri);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            return default;
+            throw new HttpRequestException(
+                $"{response.StatusCode}: {error}");
         }
 
         return await response.Content.ReadFromJsonAsync<T>();
     }
 
-    private async Task<bool> SafeDeleteAsync(string url)
+    private static async Task SendNoContentAsync(Func<Task<HttpResponseMessage>> action)
     {
-        var uri = new Uri(this.httpClient.BaseAddress!, url);
-        var response = await this.httpClient.DeleteAsync(uri);
+        var response = await action();
 
-        return response.IsSuccessStatusCode;
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException(
+                $"{response.StatusCode}: {error}");
+        }
     }
 }
