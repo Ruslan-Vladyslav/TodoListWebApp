@@ -18,13 +18,17 @@ public class TodoCommentController : ControllerBase
     [HttpPost("task/{taskId:int}")]
     public async Task<IActionResult> CreateComment(int taskId, [FromBody] CreateTodoComment model)
     {
-        if (!this.ModelState.IsValid)
+        if (!ModelState.IsValid)
         {
-            return this.BadRequest(this.ModelState);
+            return BadRequest(ModelState);
         }
 
         var created = await this._service.CreateCommentAsync(taskId, model);
-        return this.Ok(created);
+
+        return this.CreatedAtAction(
+            nameof(GetCommentById),
+            new { id = created.Id },
+            created);
     }
 
     [HttpGet("{id:int}")]
@@ -38,6 +42,6 @@ public class TodoCommentController : ControllerBase
     public async Task<IActionResult> DeleteComment(int id)
     {
         await this._service.DeleteCommentAsync(id);
-        return this.Ok();
+        return NoContent();
     }
 }

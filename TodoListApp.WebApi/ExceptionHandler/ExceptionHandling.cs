@@ -58,7 +58,13 @@ internal class ExceptionHandling
         switch (ex)
         {
             case NotFoundException:
+            case KeyNotFoundException:
                 status = HttpStatusCode.NotFound;
+                message = ex.Message;
+                break;
+
+            case UnauthorizedAccessException:
+                status = HttpStatusCode.Forbidden;
                 message = ex.Message;
                 break;
 

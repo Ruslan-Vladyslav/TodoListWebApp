@@ -33,7 +33,13 @@ public class TodoListController : ControllerBase
     public async Task<IActionResult> GetListById(int id)
     {
         var list = await this._todoListService.GetByIdListAsync(id);
-        return this.Ok(list);
+
+        if (list == null)
+        {
+            return NotFound($"TodoList with id {id} not found");
+        }
+
+        return Ok(list);
     }
 
     [HttpPost]
@@ -45,7 +51,10 @@ public class TodoListController : ControllerBase
         }
 
         var created = await this._todoListService.CreateListAsync(model);
-        return this.Ok(created);
+        return this.CreatedAtAction(
+           nameof(GetListById),
+           new { id = created.Id },
+           created);
     }
 
 
@@ -57,14 +66,28 @@ public class TodoListController : ControllerBase
             return this.BadRequest(this.ModelState);
         }
 
+        var existing = await this._todoListService.GetByIdListAsync(id);
+        if (existing == null)
+        {
+            return NotFound();
+        }
+
         await this._todoListService.UpdateListAsync(id, model);
-        return this.Ok();
+
+        return NoContent();
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteList(int id)
     {
+        var existing = await this._todoListService.GetByIdListAsync(id);
+        if (existing == null)
+        {
+            return NotFound();
+        }
+
         await this._todoListService.DeleteListAsync(id);
-        return this.Ok();
+
+        return NoContent();
     }
 }
