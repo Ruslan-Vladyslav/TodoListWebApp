@@ -10,7 +10,7 @@ public class NotificationDatabaseService : INotificationService
 
     public NotificationDatabaseService(TodoListDbContext context)
     {
-        _context = context;
+        this._context = context;
     }
 
     public async Task<ModelNotification> CreateAsync(CreateNotification item)
@@ -18,12 +18,14 @@ public class NotificationDatabaseService : INotificationService
         var entity = new NotificationEntity
         {
             UserId = item.UserId,
+            SenderUserId = item.SenderUserId,
+            SenderUserName = item.SenderUserName,
             Text = item.Text,
             IsRead = false,
             CreatedAt = DateTime.UtcNow,
             Type = item.Type,
             TodoListId = item.TodoListId,
-            TodoTaskId = item.TodoTaskId
+            TodoTaskId = item.TodoTaskId,
         };
 
         await _context.Notifications.AddAsync(entity);
@@ -33,18 +35,20 @@ public class NotificationDatabaseService : INotificationService
         {
             Id = entity.Id,
             UserId = entity.UserId,
+            SenderUserId = entity.SenderUserId,
+            SenderUserName = entity.SenderUserName,
             Text = entity.Text,
             IsRead = entity.IsRead,
             CreateDate = entity.CreatedAt,
             Type = entity.Type,
             TodoListId = entity.TodoListId,
-            TodoTaskId = entity.TodoTaskId
+            TodoTaskId = entity.TodoTaskId,
         };
     }
 
     public async Task<IEnumerable<ModelNotification>> GetUserNotificationsAsync(string userId)
     {
-        var items = await _context.Notifications
+        var items = await this._context.Notifications
             .Where(x => x.UserId == userId)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync();
@@ -53,18 +57,20 @@ public class NotificationDatabaseService : INotificationService
         {
             Id = x.Id,
             UserId = x.UserId,
+            SenderUserId = x.SenderUserId,
+            SenderUserName = x.SenderUserName,
             Text = x.Text,
             IsRead = x.IsRead,
             CreateDate = x.CreatedAt,
             Type = x.Type,
             TodoListId = x.TodoListId,
-            TodoTaskId = x.TodoTaskId
+            TodoTaskId = x.TodoTaskId,
         });
     }
 
     public async Task MarkAsReadAsync(int id)
     {
-        var entity = await _context.Notifications.FindAsync(id);
+        var entity = await this._context.Notifications.FindAsync(id);
 
         if (entity == null)
         {

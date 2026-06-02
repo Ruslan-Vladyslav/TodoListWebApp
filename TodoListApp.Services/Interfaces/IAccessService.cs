@@ -1,14 +1,15 @@
 using TodoListApp.WebApi.Models.Enums;
+using TodoListApp.WebApi.Models.Models.Access;
 
 namespace TodoListApp.Services.Interfaces;
 
 public interface IAccessService
 {
-    Task<bool> CanViewListAsync(string userId, int listId);
+    Task GrantAccessAsync(string ownerUserId, string userId, int listId, TodoListRole role);
 
-    Task<bool> CanEditListAsync(string userId, int listId);
+    Task RevokeAccessAsync(string ownerUserId, string targetUserId, int listId);
 
-    Task GrantAccessAsync(string userId, int listId, TodoListRole role);
+    Task<IEnumerable<ModelTodoListAccess>> GetAccessListAsync(int listId);
 
-    Task RevokeAccessAsync(string userId, int listId);
+    Task<TodoListRole> GetUserRoleAsync(string userId, int listId);
 }

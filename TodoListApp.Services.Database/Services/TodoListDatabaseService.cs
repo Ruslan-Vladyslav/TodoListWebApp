@@ -7,11 +7,14 @@ namespace TodoListApp.Services.Database.Services;
 
 public class TodoListDatabaseService : ITodoListService
 {
+    private readonly INotificationService _notificationService;
     private readonly TodoListDbContext todoListContext;
 
-    public TodoListDatabaseService(TodoListDbContext context)
+    public TodoListDatabaseService(TodoListDbContext context, INotificationService notificationService)
     {
         this.todoListContext = context;
+        this._notificationService = notificationService;
+
     }
 
     public async Task<ModelTodoList> CreateListAsync(CreateTodoList item)
@@ -42,17 +45,35 @@ public class TodoListDatabaseService : ITodoListService
 
     public async Task DeleteListAsync(int id)
     {
-        var entity = await this.todoListContext.TodoLists.FindAsync(id)
-            ?? throw new NotFoundException($"TodoList with id {id} not found.");
+        var entity = await this.todoListContext.TodoLists
+            .Include(x => x.Accesses)
+            .FirstOrDefaultAsync(x => x.Id == id)
+            ?? throw new NotFoundException(
+                $"TodoList with id {id} not found.");
 
-        _ = this.todoListContext.TodoLists.Remove(entity);
-        _ = await this.todoListContext.SaveChangesAsync();
+        var users = entity.Accesses
+            .Where(x => x.Accepted)
+            .Select(x => x.TargetUserId)
+            .ToList();
+
+        foreach (var userId in users)
+        {
+            _ = await this._notificationService.CreateAsync(
+                NotificationFactory.ListDeleted(
+                    userId,
+                    entity.Title,
+                    entity.Id));
+        }
+
+        todoListContext.TodoLists.Remove(entity);
+        await todoListContext.SaveChangesAsync();
     }
 
     public async Task<IEnumerable<ModelTodoList>> GetAllListAsync(int page, int pageSize)
     {
         var items = await this.todoListContext.TodoLists
             .Include(x => x.Accesses)
+            .Include(x => x.TodoTasks)
             .OrderBy(t => t.Title)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -65,6 +86,7 @@ public class TodoListDatabaseService : ITodoListService
             Description = e.Description,
             UserId = e.UserId,
             TaskCount = e.TodoTasks.Count,
+            MemberCount =e.Accesses.Count(a => a.Accepted) + 1,
         });
     }
 
@@ -73,7 +95,7 @@ public class TodoListDatabaseService : ITodoListService
         var query = this.todoListContext.TodoLists
              .Where(l =>
                 l.UserId == userId ||
-                l.Accesses.Any(a => a.TargetUserId == userId))
+                l.Accesses.Any(a => a.TargetUserId == userId && a.Accepted))
             .OrderBy(t => t.Title)
             .Select(t => new ModelTodoList
             {
@@ -82,6 +104,7 @@ public class TodoListDatabaseService : ITodoListService
                 Description = t.Description,
                 UserId = t.UserId,
                 TaskCount = t.TodoTasks.Count(),
+                MemberCount = t.Accesses.Count(a => a.Accepted) + 1,
             });
 
         var paged = await query
@@ -96,6 +119,7 @@ public class TodoListDatabaseService : ITodoListService
     {
         var entity = await this.todoListContext.TodoLists
            .Include(x => x.TodoTasks)
+           .Include(x => x.Accesses)
            .FirstOrDefaultAsync(x => x.Id == id)
            ?? throw new NotFoundException($"TodoList with id {id} not found.");
 
@@ -106,6 +130,7 @@ public class TodoListDatabaseService : ITodoListService
             Description = entity.Description,
             UserId = entity.UserId,
             TaskCount = entity.TodoTasks.Count,
+            MemberCount = entity.Accesses.Count(a => a.Accepted) + 1,
         };
     }
 

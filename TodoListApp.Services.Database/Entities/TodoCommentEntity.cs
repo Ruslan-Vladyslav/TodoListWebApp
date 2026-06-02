@@ -9,7 +9,7 @@ public class TodoCommentEntity
     public int Id { get; set; }
 
     [Required]
-    [StringLength(150, MinimumLength = 1, ErrorMessage = "Textshould contain 1-150 characters")]
+    [StringLength(150, MinimumLength = 1, ErrorMessage = "Text should contain 1-150 characters")]
     public string Text { get; set; } = string.Empty;
 
     public string? UserId { get; set; }

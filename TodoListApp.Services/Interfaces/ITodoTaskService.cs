@@ -19,11 +19,23 @@ public interface ITodoTaskService
         TodoTaskStatus? status,
         string? sort);
 
-    Task<IEnumerable<ModelTodoTask>> GetAllTasksByTitleAsync(int page, int pageSize, string? userId, string title);
+    Task<IEnumerable<ModelTodoTask>> GetAllTasksByTitleAsync(
+        int page,
+        int pageSize,
+        string? userId,
+        string title);
 
-    Task<IEnumerable<ModelTodoTask>> GetAllTasksByCreateDateAsync(int page, int pageSize, string? userId, DateTime createDate);
+    Task<IEnumerable<ModelTodoTask>> GetAllTasksByCreateDateAsync(
+        int page,
+        int pageSize,
+        string? userId,
+        DateTime createDate);
 
-    Task<IEnumerable<ModelTodoTask>> GetAllTasksByDueDateAsync(int page, int pageSize, string? userId, DateTime dueDate);
+    Task<IEnumerable<ModelTodoTask>> GetAllTasksByDueDateAsync(
+        int page,
+        int pageSize,
+        string? userId,
+        DateTime dueDate);
 
     Task<IEnumerable<ModelTodoTask>> GetAllTasksByDateRangeAsync(
         int page,

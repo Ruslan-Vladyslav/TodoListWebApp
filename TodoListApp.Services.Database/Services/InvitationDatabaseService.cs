@@ -9,13 +9,16 @@ public class InvitationDatabaseService : IInvitationService
 {
     private readonly TodoListDbContext _context;
     private readonly IAccessService _accessService;
+    private readonly INotificationService _notificationService;
 
     public InvitationDatabaseService(
         TodoListDbContext context,
-        IAccessService accessService)
+        IAccessService accessService,
+        INotificationService notificationService)
     {
-        _context = context;
-        _accessService = accessService;
+        this._context = context;
+        this._accessService = accessService;
+        this._notificationService = notificationService;
     }
 
     public async Task SendInvitationAsync(
@@ -32,7 +35,7 @@ public class InvitationDatabaseService : IInvitationService
         }
 
         var list =
-            await _context.TodoLists
+            await this._context.TodoLists
             .FirstOrDefaultAsync(x => x.Id == listId);
 
         if (list == null)
@@ -43,12 +46,11 @@ public class InvitationDatabaseService : IInvitationService
 
         if (list.UserId != senderId)
         {
-            throw new UnauthorizedAccessException(
-                "Only owner can share list");
+            throw new UnauthorizedAccessException("Only owner can share list");
         }
 
         var alreadyHasAccess =
-            await _context.TodoListAccesses
+            await this._context.TodoListAccesses
             .AnyAsync(x =>
                 x.TargetUserId == receiverId &&
                 x.TodoListId == listId);
@@ -60,7 +62,7 @@ public class InvitationDatabaseService : IInvitationService
         }
 
         var pendingInvitation =
-            await _context.TodoInvitations
+            await this._context.TodoInvitations
             .AnyAsync(x =>
                 x.TodoListId == listId &&
                 x.ReceiverUserId == receiverId &&
@@ -77,66 +79,58 @@ public class InvitationDatabaseService : IInvitationService
             {
                 SenderUserId = senderId,
                 ReceiverUserId = receiverId,
-
                 TodoListId = listId,
-
                 Role = role,
-
-                Status =
-                    InvitationStatus.Pending,
-
+                Status = InvitationStatus.Pending,
                 Message = message,
-
-                CreatedAt =
-                    DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
             };
 
-        _context.TodoInvitations.Add(
-            invitation);
-
+        this._context.TodoInvitations.Add(invitation);
         await _context.SaveChangesAsync();
+
+        _ = await this._notificationService.CreateAsync(
+           NotificationFactory.InvitationSent(
+            receiverId,
+            list.Title,
+            list.Id));
     }
 
-    public async Task AcceptInvitationAsync(
-        int invitationId)
+    public async Task AcceptInvitationAsync(int invitationId)
     {
-        using var transaction =
-            await _context.Database
-            .BeginTransactionAsync();
+        using var transaction = await this._context.Database.BeginTransactionAsync();
 
-        var invite =
-            await _context.TodoInvitations
-            .FirstOrDefaultAsync(
-                x => x.Id == invitationId);
+        var invite = await this._context.TodoInvitations
+            .Include(x => x.TodoList)
+            .FirstOrDefaultAsync(x => x.Id == invitationId);
 
         if (invite == null)
         {
-            throw new KeyNotFoundException(
-                "Invitation not found");
+            throw new KeyNotFoundException("Invitation not found");
         }
 
-        if (invite.Status !=
-            InvitationStatus.Pending)
+        if (invite.Status != InvitationStatus.Pending)
         {
-            throw new InvalidOperationException(
-                "Invitation already processed");
+            throw new InvalidOperationException("Already processed");
         }
 
-        invite.Status =
-            InvitationStatus.Accepted;
+        invite.Status = InvitationStatus.Accepted;
+        invite.RespondedAt = DateTime.UtcNow;
 
-        invite.RespondedAt =
-            DateTime.UtcNow;
+        await this._accessService.GrantAccessAsync(
+            invite.SenderUserId,
+            invite.ReceiverUserId,
+            invite.TodoListId,
+            invite.Role);
 
-        await _accessService
-            .GrantAccessAsync(
-                invite.SenderUserId,
-                invite.ReceiverUserId,
-                invite.TodoListId,
-                invite.Role);
+        _ = await this._notificationService.CreateAsync(
+            NotificationFactory.InvitationAccepted(
+            invite.SenderUserId,
+            invite.ReceiverUserId,
+            invite.TodoList.Title,
+            invite.TodoListId));
 
         await _context.SaveChangesAsync();
-
         await transaction.CommitAsync();
     }
 
@@ -144,9 +138,9 @@ public class InvitationDatabaseService : IInvitationService
         int invitationId)
     {
         var invite =
-            await _context.TodoInvitations
-            .FirstOrDefaultAsync(
-                x => x.Id == invitationId);
+            await this._context.TodoInvitations
+            .Include(x => x.TodoList)
+            .FirstOrDefaultAsync(x => x.Id == invitationId);
 
         if (invite == null)
         {
@@ -161,35 +155,40 @@ public class InvitationDatabaseService : IInvitationService
                 "Invitation already processed");
         }
 
-        invite.Status =
-            InvitationStatus.Rejected;
+        invite.Status = InvitationStatus.Rejected;
+        invite.RespondedAt = DateTime.UtcNow;
 
-        invite.RespondedAt =
-            DateTime.UtcNow;
+        await this._context.SaveChangesAsync();
 
-        await _context.SaveChangesAsync();
+        _ = await this._notificationService.CreateAsync(
+            NotificationFactory.InvitationRejected(
+            invite.SenderUserId,
+            invite.ReceiverUserId,
+            invite.TodoList.Title,
+            invite.TodoListId));
     }
 
     public async Task<IEnumerable<ModelInvitation>> GetUserInvitationsAsync(string userId)
     {
-        return await _context.TodoInvitations
+        var items = await this._context.TodoInvitations
             .Include(x => x.TodoList)
             .Where(x => x.ReceiverUserId == userId)
             .OrderByDescending(x => x.CreatedAt)
-            .ToListAsync()
-            .ContinueWith(t => t.Result.Select(x => new ModelInvitation
-            {
-                Id = x.Id,
-                TodoListId = x.TodoListId,
-                TodoListTitle = x.TodoList.Title,
+            .ToListAsync();
 
-                SenderUserId = x.SenderUserId,
-                ReceiverUserId = x.ReceiverUserId,
+        return items.Select(x => new ModelInvitation
+        {
+            Id = x.Id,
+            TodoListId = x.TodoListId,
+            TodoListTitle = x.TodoList.Title,
 
-                Role = x.Role,
-                Status = x.Status,
-                Message = x.Message,
-                CreatedAt = x.CreatedAt
-            }));
-}
+            SenderUserId = x.SenderUserId,
+            ReceiverUserId = x.ReceiverUserId,
+
+            Role = x.Role,
+            Status = x.Status,
+            Message = x.Message,
+            CreatedAt = x.CreatedAt,
+        });
+    }
 }

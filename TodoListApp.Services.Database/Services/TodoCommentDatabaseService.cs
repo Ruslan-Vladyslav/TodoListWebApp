@@ -7,21 +7,24 @@ namespace TodoListApp.Services.Database.Services;
 
 public class TodoCommentDatabaseService : ITodoCommentService
 {
-    private readonly TodoListDbContext context;
+    private readonly INotificationService _notificationService;
+    private readonly TodoListDbContext _context;
 
-    public TodoCommentDatabaseService(TodoListDbContext context)
+    public TodoCommentDatabaseService(TodoListDbContext context, INotificationService notificationService)
     {
-        this.context = context;
+        this._context = context;
+        this._notificationService = notificationService;
+
     }
 
     public async Task<ModelTodoComment> CreateCommentAsync(int taskId, CreateTodoComment comment)
     {
         ArgumentNullException.ThrowIfNull(comment);
 
-        var taskExists = await context.TodoTasks
-            .AnyAsync(t => t.Id == taskId);
+        var task = await this._context.TodoTasks
+            .FirstOrDefaultAsync(t => t.Id == taskId);
 
-        if (!taskExists)
+        if (task == null)
         {
             throw new KeyNotFoundException($"TodoTask {taskId} not found");
         }
@@ -34,22 +37,49 @@ public class TodoCommentDatabaseService : ITodoCommentService
             TodoTaskId = taskId,
         };
 
-        var created = await this.context.TodoComments.AddAsync(entity);
-        _ = await this.context.SaveChangesAsync();
+        await _context.TodoComments.AddAsync(entity);
+        await _context.SaveChangesAsync();
+
+        var list = await this._context.TodoLists
+            .AsNoTracking()
+            .FirstAsync(l => l.Id == task.TodoListId);
+
+        var recipients = new HashSet<string>();
+
+        if (list.UserId != comment.UserId)
+        {
+            _ = recipients.Add(list.UserId);
+        }
+
+        if (!string.IsNullOrEmpty(task.AssignedToUserId) &&
+            task.AssignedToUserId != comment.UserId)
+        {
+            _ = recipients.Add(task.AssignedToUserId);
+        }
+
+        foreach (var userId in recipients)
+        {
+            _ = await this._notificationService.CreateAsync(
+                NotificationFactory.TaskCommented(
+                    userId,
+                    task.Title,
+                    task.Id,
+                    senderName: comment.UserId));
+        }
 
         return new ModelTodoComment
         {
-            Id = created.Entity.Id,
-            Text = created.Entity.Text,
-            CreateDate = created.Entity.CreateDate,
-            UserId = created.Entity.UserId,
-            TodoTaskId = created.Entity.TodoTaskId,
+            Id = entity.Id,
+            Text = entity.Text,
+            CreateDate = entity.CreateDate,
+            UserId = entity.UserId,
+            TodoTaskId = entity.TodoTaskId,
         };
     }
 
     public async Task<ModelTodoComment?> GetCommentByIdAsync(int id)
     {
-        var entity = await this.context.TodoComments
+        var entity = await this._context.TodoComments
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == id);
 
@@ -70,10 +100,10 @@ public class TodoCommentDatabaseService : ITodoCommentService
 
     public async Task DeleteCommentAsync(int id)
     {
-        var entity = await this.context.TodoComments.FindAsync(id)
+        var entity = await this._context.TodoComments.FindAsync(id)
             ?? throw new KeyNotFoundException($"TodoComment with id {id} not found.");
 
-        _ = this.context.TodoComments.Remove(entity);
-        _ = await this.context.SaveChangesAsync();
+        _ = this._context.TodoComments.Remove(entity);
+        _ = await this._context.SaveChangesAsync();
     }
 }

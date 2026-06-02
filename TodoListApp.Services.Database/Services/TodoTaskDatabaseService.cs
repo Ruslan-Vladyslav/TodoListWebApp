@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TodoListApp.Services.Database.Entities;
 using TodoListApp.Services.Enums;
 using TodoListApp.Services.Interfaces;
+using TodoListApp.WebApi.Models.Enums;
 using TodoListApp.WebApi.Models.Models.TodoComment;
 using TodoListApp.WebApi.Models.Models.TodoTag;
 using TodoListApp.WebApi.Models.Models.TodoTask;
@@ -12,29 +13,44 @@ public class TodoTaskDatabaseService : ITodoTaskService
 {
     private readonly TodoListDbContext _context;
     private readonly IAccessService _accessService;
+    private readonly INotificationService _notificationService;
 
     public TodoTaskDatabaseService(
         TodoListDbContext context,
-        IAccessService accessService)
+        IAccessService accessService,
+        INotificationService notificationService)
     {
-        _context = context;
-        _accessService = accessService;
+        this._context = context;
+        this._accessService = accessService;
+        this._notificationService = notificationService;
     }
 
     public async Task<ModelTodoTask> CreateTaskAsync(CreateTodoTask item)
     {
         ArgumentNullException.ThrowIfNull(item);
 
+        var role = await this._accessService.GetUserRoleAsync(
+            item.UserId!,
+            item.TodoListId);
+
+        if (role == TodoListRole.Viewer)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
         var entity = new TodoTaskEntity
         {
             Title = item.Title,
             Description = item.Description,
             DueDate = item.DueDate,
-            CreateDate = DateTime.Now,
+            CreateDate = DateTime.UtcNow,
             CreatedByUserId = item.UserId,
             AssignedToUserId = item.AssignedUserId,
             AssignedByUserId = item.UserId,
-            AssignedAt = item.AssignedUserId != null ? DateTime.UtcNow : null,
+            AssignedAt =
+                item.AssignedUserId != null
+                ? DateTime.UtcNow
+                : null,
             Status = item.Status,
             TodoListId = item.TodoListId,
         };
@@ -42,17 +58,29 @@ public class TodoTaskDatabaseService : ITodoTaskService
         await _context.TodoTasks.AddAsync(entity);
         await _context.SaveChangesAsync();
 
+        if (item.AssignedUserId != null &&
+            item.AssignedUserId != item.UserId)
+        {
+            _ = await this._notificationService.CreateAsync(
+                NotificationFactory.TaskAssigned(
+                item.AssignedUserId,
+                item.Title!,
+                entity.Id));
+        }
+
         return Map(entity);
     }
 
     public async Task<IEnumerable<ModelTodoTask>> GetByListIdAsync(int todoListId, string userId)
     {
-        if (!await _accessService.CanViewListAsync(userId, todoListId))
+        var role = await this._accessService.GetUserRoleAsync(userId, todoListId);
+
+        if (role == TodoListRole.Viewer)
         {
             throw new UnauthorizedAccessException();
         }
 
-        var tasks = await _context.TodoTasks
+        var tasks = await this._context.TodoTasks
             .AsNoTracking()
             .Where(t => t.TodoListId == todoListId)
             .Include(t => t.Tags)
@@ -64,17 +92,18 @@ public class TodoTaskDatabaseService : ITodoTaskService
 
     public async Task<ModelTodoTask?> GetByIdTaskAsync(int id, string userId)
     {
-        var entity = await _context.TodoTasks
+        var entity = await this._context.TodoTasks
+            .AsNoTracking()
             .Include(t => t.Tags)
             .Include(t => t.Comments)
-            .FirstOrDefaultAsync(t => t.Id == id)
-            ?? throw new KeyNotFoundException();
+            .FirstOrDefaultAsync(t => t.Id == id);
 
-        if (!await _accessService.CanViewListAsync(userId, entity.TodoListId))
+        if (entity == null)
         {
-            throw new UnauthorizedAccessException();
+            throw new KeyNotFoundException();
         }
 
+        var role = await this._accessService.GetUserRoleAsync(userId, entity.TodoListId);
         return Map(entity);
     }
 
@@ -86,16 +115,24 @@ public class TodoTaskDatabaseService : ITodoTaskService
         TodoTaskStatus? status,
         string? sort)
     {
-        IQueryable<TodoTaskEntity> query = _context.TodoTasks.AsNoTracking();
+        IQueryable<TodoTaskEntity> query = this._context.TodoTasks
+            .AsNoTracking();
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            query = query.Where(t =>
+                this._context.TodoLists.Any(l =>
+                    l.Id == t.TodoListId &&
+                    (l.UserId == userId ||
+                        this._context.TodoListAccesses.Any(a =>
+                        a.TodoListId == l.Id &&
+                        a.TargetUserId == userId &&
+                        a.Accepted))));
+        }
 
         if (todoListId.HasValue)
         {
             query = query.Where(t => t.TodoListId == todoListId);
-        }
-
-        if (!string.IsNullOrEmpty(userId))
-        {
-            query = query.Where(t => t.CreatedByUserId == userId);
         }
 
         if (status.HasValue)
@@ -106,48 +143,96 @@ public class TodoTaskDatabaseService : ITodoTaskService
         query = ApplySorting(query, sort);
 
         var items = await query
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
             .ToListAsync();
 
         return items.Select(Map);
     }
 
-    public async Task UpdateTaskAsync(int id, UpdateTodoTask item, string userId)
+    public async Task UpdateTaskAsync(
+        int id,
+        UpdateTodoTask item,
+        string userId)
     {
         ArgumentNullException.ThrowIfNull(item);
 
-        var entity = await _context.TodoTasks
+        var entity = await this._context.TodoTasks
             .FirstOrDefaultAsync(x => x.Id == id)
             ?? throw new KeyNotFoundException();
 
-        if (!await _accessService.CanEditListAsync(userId, entity.TodoListId))
+        var role = await this._accessService.GetUserRoleAsync(
+            userId,
+            entity.TodoListId);
+
+        if (role == TodoListRole.Viewer)
         {
             throw new UnauthorizedAccessException();
         }
 
+        var oldStatus = entity.Status;
+
         entity.Title = item.Title!;
         entity.Description = item.Description;
         entity.DueDate = item.DueDate;
-        entity.Status = item.Status;
-        entity.TodoListId = item.TodoListId;
 
-        if (item.AssignedUserId != entity.AssignedToUserId)
+        if (role == TodoListRole.Owner ||
+            role == TodoListRole.Editor)
+        {
+            entity.Status = item.Status;
+        }
+
+        var isReassigning = item.AssignedUserId != entity.AssignedToUserId;
+
+        if (isReassigning && role != TodoListRole.Owner)
+        {
+            throw new UnauthorizedAccessException("Only owner can reassign task");
+        }
+
+        if (role == TodoListRole.Owner &&
+            item.AssignedUserId != entity.AssignedToUserId)
         {
             entity.AssignedToUserId = item.AssignedUserId;
             entity.AssignedByUserId = userId;
             entity.AssignedAt = DateTime.UtcNow;
+
+            if (item.AssignedUserId != null)
+            {
+                _ = await this._notificationService.CreateAsync(
+                    NotificationFactory.TaskAssigned(
+                        item.AssignedUserId,
+                        entity.Title,
+                        entity.Id));
+            }
         }
 
         await _context.SaveChangesAsync();
+
+        if (oldStatus != TodoTaskStatus.Completed &&
+            entity.Status == TodoTaskStatus.Completed)
+        {
+            var ownerId = await this._context.TodoLists
+                .Where(x => x.Id == entity.TodoListId)
+                .Select(x => x.UserId)
+                .FirstOrDefaultAsync();
+
+            if (!string.IsNullOrEmpty(ownerId) && ownerId != userId)
+            {
+                _ = await this._notificationService.CreateAsync(
+                    NotificationFactory.TaskCompleted(
+                        ownerId,
+                        entity.Title,
+                        entity.Id));
+            }
+        }
     }
 
     public async Task DeleteTaskAsync(int id, string userId)
     {
-        var entity = await _context.TodoTasks.FindAsync(id)
+        var entity = await this._context.TodoTasks.FindAsync(id)
             ?? throw new KeyNotFoundException();
 
-        if (!await _accessService.CanEditListAsync(userId, entity.TodoListId))
+        var role = await this._accessService.GetUserRoleAsync(userId, entity.TodoListId);
+
+        if (role != TodoListRole.Owner)
         {
             throw new UnauthorizedAccessException();
         }
@@ -159,12 +244,9 @@ public class TodoTaskDatabaseService : ITodoTaskService
     public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByCreateDateAsync(
         int page, int pageSize, string? userId, DateTime createDate)
     {
-        var query = _context.TodoTasks.AsNoTracking();
-
-        if (!string.IsNullOrEmpty(userId))
-        {
-            query = query.Where(t => t.CreatedByUserId == userId);
-        }
+        var query = ApplyUserAccess(
+            _context.TodoTasks.AsNoTracking(),
+            userId);
 
         query = query.Where(t => t.CreateDate.Date == createDate.Date);
 
@@ -180,12 +262,9 @@ public class TodoTaskDatabaseService : ITodoTaskService
     public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByDueDateAsync(
         int page, int pageSize, string? userId, DateTime dueDate)
     {
-        var query = _context.TodoTasks.AsNoTracking();
-
-        if (!string.IsNullOrEmpty(userId))
-        {
-            query = query.Where(t => t.CreatedByUserId == userId);
-        }
+        var query = ApplyUserAccess(
+            _context.TodoTasks.AsNoTracking(),
+            userId);
 
         query = query.Where(t => t.DueDate.Date == dueDate.Date);
 
@@ -201,12 +280,9 @@ public class TodoTaskDatabaseService : ITodoTaskService
     public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByDateRangeAsync(
         int page, int pageSize, string? userId, DateTime fromDate, DateTime toDate)
     {
-        var query = _context.TodoTasks.AsNoTracking();
-
-        if (!string.IsNullOrEmpty(userId))
-        {
-            query = query.Where(t => t.CreatedByUserId == userId);
-        }
+        var query = ApplyUserAccess(
+            _context.TodoTasks.AsNoTracking(),
+            userId);
 
         query = query.Where(t =>
             t.DueDate >= fromDate.Date &&
@@ -224,12 +300,9 @@ public class TodoTaskDatabaseService : ITodoTaskService
     public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByTitleAsync(
         int page, int pageSize, string? userId, string title)
     {
-        var query = _context.TodoTasks.AsNoTracking();
-
-        if (!string.IsNullOrEmpty(userId))
-        {
-            query = query.Where(t => t.CreatedByUserId == userId);
-        }
+        var query = ApplyUserAccess(
+            _context.TodoTasks.AsNoTracking(),
+            userId);
 
         query = query.Where(t => t.Title.Contains(title));
 
@@ -255,7 +328,7 @@ public class TodoTaskDatabaseService : ITodoTaskService
         var order = parts[0].ToLower();
         var field = parts.Length > 1
             ? parts[1].TrimEnd(')').ToLower()
-            : "";
+            : string.Empty;
 
         return order switch
         {
@@ -295,7 +368,7 @@ public class TodoTaskDatabaseService : ITodoTaskService
                 ? e.Tags.Select(t => new ModelTodoTag
                 {
                     Id = t.Id,
-                    Name = t.Name
+                    Name = t.Name,
                 }).ToList()
                 : new List<ModelTodoTag>(),
 
@@ -307,7 +380,26 @@ public class TodoTaskDatabaseService : ITodoTaskService
                     CreateDate = c.CreateDate,
                     UserId = c.UserId,
                 }).ToList()
-                : new List<ModelTodoComment>()
+                : new List<ModelTodoComment>(),
         };
+    }
+
+    private IQueryable<TodoTaskEntity> ApplyUserAccess(
+        IQueryable<TodoTaskEntity> query,
+        string? userId)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return query;
+        }
+
+        return query.Where(t =>
+            this._context.TodoLists.Any(l =>
+                l.Id == t.TodoListId &&
+                (l.UserId == userId ||
+                    this._context.TodoListAccesses.Any(a =>
+                        a.TodoListId == l.Id &&
+                        a.TargetUserId == userId &&
+                        a.Accepted))));
     }
 }

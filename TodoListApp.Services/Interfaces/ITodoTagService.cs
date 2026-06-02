@@ -11,9 +11,9 @@ public interface ITodoTagService
 
     Task<ModelTodoTag?> GetByIdTagAsync(int id);
 
-    Task<IEnumerable<ModelTodoTask>> GetTasksByTagAsync(int tagId);
+    Task<IEnumerable<ModelTodoTask>> GetTasksByTagAsync(int tagId, string userId);
 
-    Task AddTagToTaskAsync(int taskId, int tagId);
+    Task AddTagToTaskAsync(int taskId, int tagId, string userId);
 
-    Task DeleteTagFromTaskAsync(int taskId, int tagId);
+    Task DeleteTagFromTaskAsync(int taskId, int tagId, string userId);
 }
