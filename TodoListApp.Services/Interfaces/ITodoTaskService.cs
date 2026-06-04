@@ -1,4 +1,5 @@
 using TodoListApp.Services.Enums;
+using TodoListApp.WebApi.Models.Models.Common;
 using TodoListApp.WebApi.Models.Models.TodoTask;
 
 namespace TodoListApp.Services.Interfaces;
@@ -11,7 +12,7 @@ public interface ITodoTaskService
 
     Task<IEnumerable<ModelTodoTask>> GetByListIdAsync(int todoListId, string userId);
 
-    Task<IEnumerable<ModelTodoTask>> GetAllTasksAsync(
+    Task<PagedResponse<ModelTodoTask>> GetAllTasksAsync(
         int page,
         int pageSize,
         int? todoListId,
@@ -19,25 +20,25 @@ public interface ITodoTaskService
         TodoTaskStatus? status,
         string? sort);
 
-    Task<IEnumerable<ModelTodoTask>> GetAllTasksByTitleAsync(
+    Task<PagedResponse<ModelTodoTask>> GetAllTasksByTitleAsync(
         int page,
         int pageSize,
         string? userId,
         string title);
 
-    Task<IEnumerable<ModelTodoTask>> GetAllTasksByCreateDateAsync(
+    Task<PagedResponse<ModelTodoTask>> GetAllTasksByCreateDateAsync(
         int page,
         int pageSize,
         string? userId,
         DateTime createDate);
 
-    Task<IEnumerable<ModelTodoTask>> GetAllTasksByDueDateAsync(
+    Task<PagedResponse<ModelTodoTask>> GetAllTasksByDueDateAsync(
         int page,
         int pageSize,
         string? userId,
         DateTime dueDate);
 
-    Task<IEnumerable<ModelTodoTask>> GetAllTasksByDateRangeAsync(
+    Task<PagedResponse<ModelTodoTask>> GetAllTasksByDateRangeAsync(
         int page,
         int pageSize,
         string? userId,

@@ -1,3 +1,4 @@
+using TodoListApp.WebApi.Models.Models.Common;
 using TodoListApp.WebApi.Models.Models.TodoTag;
 using TodoListApp.WebApi.Models.Models.TodoTask;
 
@@ -7,7 +8,7 @@ public interface ITodoTagService
 {
     Task<ModelTodoTag> CreateTagAsync(string tagName);
 
-    Task<IEnumerable<ModelTodoTag>> GetAllTagsAsync(int page, int pageSize);
+    Task<PagedResponse<ModelTodoTag>> GetAllTagsAsync(int page, int pageSize);
 
     Task<ModelTodoTag?> GetByIdTagAsync(int id);
 
