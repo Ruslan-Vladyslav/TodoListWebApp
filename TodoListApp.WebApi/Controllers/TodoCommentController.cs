@@ -1,9 +1,12 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.WebApi.Models.Models.TodoComment;
 
 namespace TodoListApp.WebApi.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("[controller]")]
 public class TodoCommentController : ControllerBase
@@ -22,6 +25,9 @@ public class TodoCommentController : ControllerBase
         {
             return BadRequest(ModelState);
         }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        model.UserId = userId!;
 
         var created = await this._service.CreateCommentAsync(taskId, model);
 

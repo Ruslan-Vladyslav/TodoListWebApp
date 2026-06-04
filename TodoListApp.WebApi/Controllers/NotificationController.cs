@@ -1,12 +1,15 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.WebApi.Models.Models.Notification;
 
 namespace TodoListApp.WebApi.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("notifications")]
-internal class NotificationController : ControllerBase
+public class NotificationController : ControllerBase
 {
     private readonly INotificationService _service;
 
@@ -15,10 +18,11 @@ internal class NotificationController : ControllerBase
         this._service = service;
     }
 
-    [HttpGet("user/{userId}")]
-    public async Task<IActionResult> GetUserNotifications(string userId)
+    [HttpGet("user")]
+    public async Task<IActionResult> GetUserNotifications()
     {
-        var result = await this._service.GetUserNotificationsAsync(userId);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var result = await this._service.GetUserNotificationsAsync(userId!);
         return Ok(result);
     }
 

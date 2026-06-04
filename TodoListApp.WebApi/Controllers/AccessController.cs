@@ -1,13 +1,15 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.WebApi.Models.Enums;
 
 namespace TodoListApp.WebApi.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("[controller]")]
-internal class AccessController : ControllerBase
+public class AccessController : ControllerBase
 {
     private readonly IAccessService _service;
 
@@ -53,9 +55,14 @@ internal class AccessController : ControllerBase
     }
 
     [HttpGet("role")]
-    public async Task<IActionResult> GetRole([FromQuery] string userId, [FromQuery] int listId)
+    public async Task<IActionResult> GetRole([FromQuery] int listId)
     {
-        var role = await this._service.GetUserRoleAsync(userId, listId);
+        foreach (var claim in User.Claims)
+        {
+            Console.WriteLine($"{claim.Type} = {claim.Value}");
+        }
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var role = await this._service.GetUserRoleAsync(userId!, listId);
         return Ok(role);
     }
 }

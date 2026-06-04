@@ -1,9 +1,12 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.WebApi.Models.Models.TodoList;
 
 namespace TodoListApp.WebApi.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("[controller]")]
 public class TodoListController : ControllerBase
@@ -22,9 +25,15 @@ public class TodoListController : ControllerBase
         return this.Ok(lists);
     }
 
-    [HttpGet("user/{userId}")]
-    public async Task<IActionResult> GetAllListsByUser(string userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 8)
+    [HttpGet("user")]
+    public async Task<IActionResult> GetAllListsByUser([FromQuery] int page = 1, [FromQuery] int pageSize = 8)
     {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
         var lists = await this._todoListService.GetAllListByUserAsync(page, pageSize, userId);
         return this.Ok(lists);
     }
@@ -49,6 +58,13 @@ public class TodoListController : ControllerBase
         {
             return this.BadRequest(this.ModelState);
         }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+        model.UserId = userId;
 
         var created = await this._todoListService.CreateListAsync(model);
         return this.CreatedAtAction(

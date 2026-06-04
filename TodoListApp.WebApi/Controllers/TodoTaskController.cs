@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TodoListApp.Services.Enums;
 using TodoListApp.Services.Interfaces;
@@ -5,6 +7,7 @@ using TodoListApp.WebApi.Models.Models.TodoTask;
 
 namespace TodoListApp.WebApi.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("[controller]")]
 public class TodoTaskController : ControllerBase
@@ -17,9 +20,10 @@ public class TodoTaskController : ControllerBase
     }
 
     [HttpGet("by-list/{listId:int}")]
-    public async Task<IActionResult> GetByListId(int listId, [FromQuery] string userId)
+    public async Task<IActionResult> GetByListId(int listId)
     {
-        var tasks = await this._service.GetByListIdAsync(listId, userId);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var tasks = await this._service.GetByListIdAsync(listId, userId!);
         return Ok(tasks);
     }
 
@@ -31,6 +35,9 @@ public class TodoTaskController : ControllerBase
             return BadRequest(ModelState);
         }
 
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        model.UserId = userId!;
+
         var created = await this._service.CreateTaskAsync(model);
 
         return this.CreatedAtAction(
@@ -40,29 +47,31 @@ public class TodoTaskController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> UpdateTask(int id, [FromBody] UpdateTodoTask model, [FromQuery] string userId)
+    public async Task<IActionResult> UpdateTask(int id, [FromBody] UpdateTodoTask model)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
 
-        var existing = await this._service.GetByIdTaskAsync(id, userId);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var existing = await this._service.GetByIdTaskAsync(id, userId!);
 
         if (existing == null)
         {
             return NotFound($"Task with id {id} not found");
         }
 
-        await this._service.UpdateTaskAsync(id, model, userId);
+        await this._service.UpdateTaskAsync(id, model, userId!);
 
         return NoContent();
     }
 
     [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetTaskById(int id, [FromQuery] string userId)
+    public async Task<IActionResult> GetTaskById(int id)
     {
-        var task = await this._service.GetByIdTaskAsync(id, userId);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var task = await this._service.GetByIdTaskAsync(id, userId!);
 
         if (task == null)
         {
@@ -77,10 +86,10 @@ public class TodoTaskController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 8,
         [FromQuery] int? listId = null,
-        [FromQuery] string? userId = null,
         [FromQuery] TodoTaskStatus? status = null,
         [FromQuery] string? sort = null)
     {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var tasks = await this._service.GetAllTasksAsync(
             page,
             pageSize,
@@ -96,7 +105,6 @@ public class TodoTaskController : ControllerBase
     public async Task<IActionResult> GetTasksByCreateDate(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
-        [FromQuery] string? userId = null,
         [FromQuery] DateTime? date = null)
     {
         if (date == null)
@@ -104,6 +112,7 @@ public class TodoTaskController : ControllerBase
             return BadRequest("Create date is required.");
         }
 
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var tasks = await this._service.GetAllTasksByCreateDateAsync(
             page,
             pageSize,
@@ -117,7 +126,6 @@ public class TodoTaskController : ControllerBase
     public async Task<IActionResult> GetTasksByDueDate(
        [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
-        [FromQuery] string? userId = null,
         [FromQuery] DateTime? date = null)
     {
         if (date == null)
@@ -125,6 +133,7 @@ public class TodoTaskController : ControllerBase
             return BadRequest("Due date is required.");
         }
 
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var tasks = await this._service.GetAllTasksByDueDateAsync(
             page,
             pageSize,
@@ -138,7 +147,6 @@ public class TodoTaskController : ControllerBase
     public async Task<IActionResult> GetTasksByTitle(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
-        [FromQuery] string? userId = null,
         [FromQuery] string? title = null)
     {
         if (string.IsNullOrWhiteSpace(title))
@@ -146,6 +154,7 @@ public class TodoTaskController : ControllerBase
             return BadRequest("Title is required.");
         }
 
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var tasks = await this._service.GetAllTasksByTitleAsync(
             page,
             pageSize,
@@ -159,7 +168,6 @@ public class TodoTaskController : ControllerBase
     public async Task<IActionResult> GetTasksByDateRange(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
-        [FromQuery] string? userId = null,
         [FromQuery] DateTime? fromDate = null,
         [FromQuery] DateTime? toDate = null)
     {
@@ -168,6 +176,7 @@ public class TodoTaskController : ControllerBase
             return BadRequest("Both dates are required.");
         }
 
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var tasks = await this._service.GetAllTasksByDateRangeAsync(
             page,
             pageSize,
@@ -179,16 +188,17 @@ public class TodoTaskController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeleteTask(int id, [FromQuery] string userId)
+    public async Task<IActionResult> DeleteTask(int id)
     {
-        var existing = await this._service.GetByIdTaskAsync(id, userId);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var existing = await this._service.GetByIdTaskAsync(id, userId!);
 
         if (existing == null)
         {
             return NotFound($"Task with id {id} not found");
         }
 
-        await this._service.DeleteTaskAsync(id, userId);
+        await this._service.DeleteTaskAsync(id, userId!);
 
         return NoContent();
     }

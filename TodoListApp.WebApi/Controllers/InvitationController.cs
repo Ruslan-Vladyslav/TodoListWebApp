@@ -1,12 +1,15 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.WebApi.Models.Models.Invitation;
 
 namespace TodoListApp.WebApi.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("[controller]")]
-internal class InvitationController : ControllerBase
+public class InvitationController : ControllerBase
 {
     private readonly IInvitationService _service;
 
@@ -18,8 +21,10 @@ internal class InvitationController : ControllerBase
     [HttpPost("send")]
     public async Task<IActionResult> Send(SendInvitationRequest request)
     {
+        var senderId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
         await this._service.SendInvitationAsync(
-            request.SenderId,
+            senderId!,
             request.ReceiverId,
             request.ListId,
             request.Role,
@@ -42,10 +47,11 @@ internal class InvitationController : ControllerBase
         return Ok();
     }
 
-    [HttpGet("user/{userId}")]
-    public async Task<IActionResult> GetUserInvitations(string userId)
+    [HttpGet("user")]
+    public async Task<IActionResult> GetUserInvitations()
     {
-        var result = await this._service.GetUserInvitationsAsync(userId);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var result = await this._service.GetUserInvitationsAsync(userId!);
         return Ok(result);
     }
 }
