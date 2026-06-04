@@ -15,18 +15,19 @@ public class AccessWebApiService : IAccessService
         this.httpClient = client;
     }
 
-    public async Task GrantAccessAsync(string ownerUserId, string userId, int listId, TodoListRole role)
+    public Task GrantAccessAsync(string ownerUserId, string userId, int listId, TodoListRole role)
     {
-        await SendNoContentAsync(() =>
+        return SendNoContentAsync(() =>
             httpClient.PostAsync(
-                $"{BaseRoute}/grant?ownerUserId={ownerUserId}&userId={userId}&listId={listId}&role={role}", null));
+                $"{BaseRoute}/grant?userId={userId}&listId={listId}&role={(int)role}",
+                null));
     }
 
-    public async Task RevokeAccessAsync(string ownerUserId, string targetUserId, int listId)
+    public Task RevokeAccessAsync(string ownerUserId, string targetUserId, int listId)
     {
-        await SendNoContentAsync(() =>
+        return SendNoContentAsync(() =>
             httpClient.DeleteAsync(
-                $"{BaseRoute}/revoke?ownerUserId={ownerUserId}&targetUserId={targetUserId}&listId={listId}"));
+                $"{BaseRoute}/revoke?targetUserId={targetUserId}&listId={listId}"));
     }
 
     public async Task<IEnumerable<ModelTodoListAccess>> GetAccessListAsync(int listId)
@@ -41,7 +42,7 @@ public class AccessWebApiService : IAccessService
     public async Task<TodoListRole> GetUserRoleAsync(string userId, int listId)
     {
         var response = await httpClient.GetAsync(
-            $"{BaseRoute}/role?userId={userId}&listId={listId}");
+            $"{BaseRoute}/role?listId={listId}");
 
         if (!response.IsSuccessStatusCode)
         {

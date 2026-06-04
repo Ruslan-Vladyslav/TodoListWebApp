@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using TodoListApp.Services.Interfaces;
+using TodoListApp.WebApi.Models.Models.Common;
 using TodoListApp.WebApi.Models.Models.TodoTag;
 using TodoListApp.WebApi.Models.Models.TodoTask;
 
@@ -15,12 +16,12 @@ public class TodoTagWebApiService : ITodoTagService
         this.httpClient = client;
     }
 
-    public async Task<IEnumerable<ModelTodoTag>> GetAllTagsAsync(int page, int pageSize)
+    public async Task<PagedResponse<ModelTodoTag>> GetAllTagsAsync(int page, int pageSize)
     {
-        var result = await SendAsync<IEnumerable<ModelTodoTag>>(
+        var result = await SendAsync<PagedResponse<ModelTodoTag>>(
            () => httpClient.GetAsync($"{BaseRoute}?page={page}&pageSize={pageSize}"));
 
-        return result ?? Enumerable.Empty<ModelTodoTag>();
+        return result ?? new PagedResponse<ModelTodoTag>();
     }
 
     public Task<ModelTodoTag?> GetByIdTagAsync(int id)

@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Http;
 using TodoListApp.Services.Interfaces;
+using TodoListApp.WebApi.Models.Models.Common;
 using TodoListApp.WebApi.Models.Models.TodoList;
 
 namespace TodoListApp.Services.WebApi.Services
@@ -21,20 +22,20 @@ namespace TodoListApp.Services.WebApi.Services
                 () => httpClient.PostAsJsonAsync(BaseRoute, item));
         }
 
-        public async Task<IEnumerable<ModelTodoList>> GetAllListAsync(int page, int pageSize)
+        public async Task<PagedResponse<ModelTodoList>> GetAllListAsync(int page, int pageSize)
         {
-            var result = await SendAsync<IEnumerable<ModelTodoList>>(
+            var result = await SendAsync<PagedResponse<ModelTodoList>>(
                 () => httpClient.GetAsync($"{BaseRoute}?page={page}&pageSize={pageSize}"));
 
-            return result ?? Enumerable.Empty<ModelTodoList>();
+            return result ?? new PagedResponse<ModelTodoList>();
         }
 
-        public async Task<IEnumerable<ModelTodoList>> GetAllListByUserAsync(int page, int pageSize, string userId)
+        public async Task<PagedResponse<ModelTodoList>> GetAllListByUserAsync(int page, int pageSize, string userId)
         {
-            var result = await SendAsync<IEnumerable<ModelTodoList>>(
-                () => httpClient.GetAsync($"{BaseRoute}/user/{userId}?page={page}&pageSize={pageSize}"));
+            var result = await SendAsync<PagedResponse<ModelTodoList>>(
+                () => httpClient.GetAsync($"{BaseRoute}/user?page={page}&pageSize={pageSize}"));
 
-            return result ?? Enumerable.Empty<ModelTodoList>();
+            return result ?? new PagedResponse<ModelTodoList>();
         }
 
         public Task<ModelTodoList?> GetByIdListAsync(int id)

@@ -59,15 +59,9 @@ public class InvitationWebApiService : IInvitationService
 
     public async Task<IEnumerable<ModelInvitation>> GetUserInvitationsAsync(string userId)
     {
-        if (string.IsNullOrWhiteSpace(userId))
-        {
-            return Enumerable.Empty<ModelInvitation>();
-        }
-
-        var result = await SendAsync<IEnumerable<ModelInvitation>>(
-            () => httpClient.GetAsync($"{BaseRoute}/user/{userId}"));
-
-        return result ?? Enumerable.Empty<ModelInvitation>();
+        return await SendAsync<IEnumerable<ModelInvitation>>(
+            () => httpClient.GetAsync($"{BaseRoute}/user"))
+            ?? Enumerable.Empty<ModelInvitation>();
     }
 
     private static async Task<T?> SendAsync<T>(Func<Task<HttpResponseMessage>> action)

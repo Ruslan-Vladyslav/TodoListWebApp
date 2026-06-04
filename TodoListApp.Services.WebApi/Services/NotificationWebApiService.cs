@@ -29,7 +29,7 @@ public class NotificationWebApiService : INotificationService
     public async Task<IEnumerable<ModelNotification>> GetUserNotificationsAsync(string userId)
     {
         var result = await this.httpClient.GetFromJsonAsync<IEnumerable<ModelNotification>>(
-            $"{BaseRoute}/user/{userId}");
+            $"{BaseRoute}/user");
 
         return result ?? Enumerable.Empty<ModelNotification>();
     }
