@@ -13,4 +13,8 @@ public class CreateNotification
     public int? TodoListId { get; set; }
 
     public int? TodoTaskId { get; set; }
+
+    public string? SenderUserId { get; set; }
+
+    public string? SenderUserName { get; set; }
 }

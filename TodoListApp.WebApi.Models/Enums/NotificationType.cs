@@ -2,9 +2,18 @@ namespace TodoListApp.WebApi.Models.Enums;
 
 public enum NotificationType
 {
-    ShareInvitation,
+    InvitationSent,
+    InvitationAccepted,
+    InvitationRejected,
+
+    TaskCreated,
+    TaskUpdated,
     TaskAssigned,
-    AccessGranted,
-    AccessRejected,
+    TaskCompleted,
+
     CommentAdded,
+    TagAdded,
+    MemberRemoved,
+
+    ListDeleted,
 }

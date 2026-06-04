@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using TodoListApp.Services.Enums;
+using TodoListApp.WebApi.Models.Enums;
 using TodoListApp.WebApi.Models.Models.TodoComment;
 using TodoListApp.WebApi.Models.Models.TodoTag;
 
@@ -24,6 +25,8 @@ public class ModelTodoTask
 
     [Required]
     public TodoTaskStatus Status { get; set; } = TodoTaskStatus.NotStarted;
+
+    public TodoListRole Role { get; set; }
 
     public string UserId { get; set; } = string.Empty;
 

@@ -6,5 +6,7 @@ public class ModelTodoListMembers
 
     public string Title { get; set; } = null!;
 
+    public string OwnerUserId { get; set; } = null!;
+
     public List<MemberModel> Members { get; set; } = new();
 }
