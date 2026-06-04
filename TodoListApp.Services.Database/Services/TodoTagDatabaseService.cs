@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TodoListApp.Services.Database.Entities;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.WebApi.Models.Enums;
+using TodoListApp.WebApi.Models.Models.Common;
 using TodoListApp.WebApi.Models.Models.TodoTag;
 using TodoListApp.WebApi.Models.Models.TodoTask;
 
@@ -106,20 +107,29 @@ public class TodoTagDatabaseService : ITodoTagService
         await _context.SaveChangesAsync();
     }
 
-    public async Task<IEnumerable<ModelTodoTag>> GetAllTagsAsync(int page, int pageSize)
+    public async Task<PagedResponse<ModelTodoTag>> GetAllTagsAsync(int page, int pageSize)
     {
-        var tags = await this._context.TodoTags
-            .AsNoTracking()
+        var query = this._context.TodoTags.AsNoTracking();
+
+        var totalCount = await query.CountAsync();
+
+        var tags = await query
             .OrderBy(t => t.Name)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
 
-        return tags.Select(t => new ModelTodoTag
+        return new PagedResponse<ModelTodoTag>
         {
-            Id = t.Id,
-            Name = t.Name,
-        });
+            Items = tags.Select(t => new ModelTodoTag
+            {
+                Id = t.Id,
+                Name = t.Name,
+            }),
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
     }
 
     public async Task<ModelTodoTag?> GetByIdTagAsync(int id)

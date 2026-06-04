@@ -3,6 +3,7 @@ using TodoListApp.Services.Database.Entities;
 using TodoListApp.Services.Enums;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.WebApi.Models.Enums;
+using TodoListApp.WebApi.Models.Models.Common;
 using TodoListApp.WebApi.Models.Models.TodoComment;
 using TodoListApp.WebApi.Models.Models.TodoTag;
 using TodoListApp.WebApi.Models.Models.TodoTask;
@@ -107,7 +108,7 @@ public class TodoTaskDatabaseService : ITodoTaskService
         return Map(entity);
     }
 
-    public async Task<IEnumerable<ModelTodoTask>> GetAllTasksAsync(
+    public async Task<PagedResponse<ModelTodoTask>> GetAllTasksAsync(
         int page,
         int pageSize,
         int? todoListId,
@@ -140,12 +141,22 @@ public class TodoTaskDatabaseService : ITodoTaskService
             query = query.Where(t => t.Status == status);
         }
 
+        var totalCount = await query.CountAsync();
+
         query = ApplySorting(query, sort);
 
         var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
 
-        return items.Select(Map);
+        return new PagedResponse<ModelTodoTask>
+        {
+            Items = items.Select(Map),
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize,
+        };
     }
 
     public async Task UpdateTaskAsync(
@@ -241,7 +252,7 @@ public class TodoTaskDatabaseService : ITodoTaskService
         await _context.SaveChangesAsync();
     }
 
-    public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByCreateDateAsync(
+    public async Task<PagedResponse<ModelTodoTask>> GetAllTasksByCreateDateAsync(
         int page, int pageSize, string? userId, DateTime createDate)
     {
         var query = ApplyUserAccess(
@@ -250,16 +261,24 @@ public class TodoTaskDatabaseService : ITodoTaskService
 
         query = query.Where(t => t.CreateDate.Date == createDate.Date);
 
+        var totalCount = await query.CountAsync();
+
         var items = await query
             .OrderBy(t => t.CreateDate)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
 
-        return items.Select(Map);
+        return new PagedResponse<ModelTodoTask>
+        {
+            Items = items.Select(Map),
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
     }
 
-    public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByDueDateAsync(
+    public async Task<PagedResponse<ModelTodoTask>> GetAllTasksByDueDateAsync(
         int page, int pageSize, string? userId, DateTime dueDate)
     {
         var query = ApplyUserAccess(
@@ -268,16 +287,24 @@ public class TodoTaskDatabaseService : ITodoTaskService
 
         query = query.Where(t => t.DueDate.Date == dueDate.Date);
 
+        var totalCount = await query.CountAsync();
+
         var items = await query
             .OrderBy(t => t.DueDate)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
 
-        return items.Select(Map);
+        return new PagedResponse<ModelTodoTask>
+        {
+            Items = items.Select(Map),
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
     }
 
-    public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByDateRangeAsync(
+    public async Task<PagedResponse<ModelTodoTask>> GetAllTasksByDateRangeAsync(
         int page, int pageSize, string? userId, DateTime fromDate, DateTime toDate)
     {
         var query = ApplyUserAccess(
@@ -288,16 +315,24 @@ public class TodoTaskDatabaseService : ITodoTaskService
             t.DueDate >= fromDate.Date &&
             t.DueDate <= toDate.Date);
 
+        var totalCount = await query.CountAsync();
+
         var items = await query
             .OrderBy(t => t.DueDate)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
 
-        return items.Select(Map);
+        return new PagedResponse<ModelTodoTask>
+        {
+            Items = items.Select(Map),
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
     }
 
-    public async Task<IEnumerable<ModelTodoTask>> GetAllTasksByTitleAsync(
+    public async Task<PagedResponse<ModelTodoTask>> GetAllTasksByTitleAsync(
         int page, int pageSize, string? userId, string title)
     {
         var query = ApplyUserAccess(
@@ -306,13 +341,21 @@ public class TodoTaskDatabaseService : ITodoTaskService
 
         query = query.Where(t => t.Title.Contains(title));
 
+        var totalCount = await query.CountAsync();
+
         var items = await query
             .OrderBy(t => t.DueDate)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
 
-        return items.Select(Map);
+        return new PagedResponse<ModelTodoTask>
+        {
+            Items = items.Select(Map),
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
     }
 
     private static IQueryable<TodoTaskEntity> ApplySorting(

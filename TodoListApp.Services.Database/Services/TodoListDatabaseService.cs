@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TodoListApp.Services.Database.Entity;
 using TodoListApp.Services.Interfaces;
+using TodoListApp.WebApi.Models.Models.Common;
 using TodoListApp.WebApi.Models.Models.TodoList;
 
 namespace TodoListApp.Services.Database.Services;
@@ -9,11 +10,13 @@ public class TodoListDatabaseService : ITodoListService
 {
     private readonly INotificationService _notificationService;
     private readonly TodoListDbContext todoListContext;
+    private readonly IUserService _userService;
 
-    public TodoListDatabaseService(TodoListDbContext context, INotificationService notificationService)
+    public TodoListDatabaseService(TodoListDbContext context, INotificationService notificationService, IUserService userService)
     {
         this.todoListContext = context;
         this._notificationService = notificationService;
+        this._userService = userService;
 
     }
 
@@ -69,33 +72,57 @@ public class TodoListDatabaseService : ITodoListService
         await todoListContext.SaveChangesAsync();
     }
 
-    public async Task<IEnumerable<ModelTodoList>> GetAllListAsync(int page, int pageSize)
+    public async Task<PagedResponse<ModelTodoList>> GetAllListAsync(int page, int pageSize)
     {
-        var items = await this.todoListContext.TodoLists
+        var query = this.todoListContext.TodoLists
             .Include(x => x.Accesses)
-            .Include(x => x.TodoTasks)
+            .Include(x => x.TodoTasks);
+
+        var totalCount = await query.CountAsync();
+
+        var items = await query
             .OrderBy(t => t.Title)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
 
-        return items.Select(e => new ModelTodoList
+        var models = new List<ModelTodoList>();
+
+        foreach (var e in items)
         {
-            Id = e.Id,
-            Title = e.Title,
-            Description = e.Description,
-            UserId = e.UserId,
-            TaskCount = e.TodoTasks.Count,
-            MemberCount =e.Accesses.Count(a => a.Accepted) + 1,
-        });
+            var userName = await _userService.GetUserNameAsync(e.UserId!);
+
+            models.Add(new ModelTodoList
+            {
+                Id = e.Id,
+                Title = e.Title,
+                Description = e.Description,
+                UserId = e.UserId,
+                UserName = userName,
+                TaskCount = e.TodoTasks.Count,
+                MemberCount = e.Accesses.Count(a => a.Accepted) + 1,
+            });
+        }
+
+        return new PagedResponse<ModelTodoList>
+        {
+            Items = models,
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize,
+        };
     }
 
-    public async Task<IEnumerable<ModelTodoList>> GetAllListByUserAsync(int page, int pageSize, string userId)
+    public async Task<PagedResponse<ModelTodoList>> GetAllListByUserAsync(int page, int pageSize, string userId)
     {
         var query = this.todoListContext.TodoLists
              .Where(l =>
                 l.UserId == userId ||
-                l.Accesses.Any(a => a.TargetUserId == userId && a.Accepted))
+                l.Accesses.Any(a => a.TargetUserId == userId && a.Accepted));
+
+        var totalCount = await query.CountAsync();
+
+        var pagedQuery = query
             .OrderBy(t => t.Title)
             .Select(t => new ModelTodoList
             {
@@ -107,12 +134,18 @@ public class TodoListDatabaseService : ITodoListService
                 MemberCount = t.Accesses.Count(a => a.Accepted) + 1,
             });
 
-        var paged = await query
+        var paged = await pagedQuery
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
 
-        return paged;
+        return new PagedResponse<ModelTodoList>
+        {
+            Items = paged,
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
     }
 
     public async Task<ModelTodoList?> GetByIdListAsync(int id)
@@ -123,11 +156,15 @@ public class TodoListDatabaseService : ITodoListService
            .FirstOrDefaultAsync(x => x.Id == id)
            ?? throw new NotFoundException($"TodoList with id {id} not found.");
 
+
+        var userName = await _userService.GetUserNameAsync(entity.UserId!);
+        Console.WriteLine($"UserName for UserId {entity.UserId}: {userName}");
         return new ModelTodoList
         {
             Id = entity.Id,
             Title = entity.Title,
             Description = entity.Description,
+            UserName = userName,
             UserId = entity.UserId,
             TaskCount = entity.TodoTasks.Count,
             MemberCount = entity.Accesses.Count(a => a.Accepted) + 1,

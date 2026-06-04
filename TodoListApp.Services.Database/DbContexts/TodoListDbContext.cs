@@ -1,10 +1,12 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using TodoListApp.Services.Database.Entities;
 using TodoListApp.Services.Database.Entity;
 
 namespace TodoListApp.Services.Database
 {
-    public class TodoListDbContext : DbContext
+    public class TodoListDbContext : IdentityDbContext<IdentityUser>
     {
         public TodoListDbContext(DbContextOptions<TodoListDbContext> options)
             : base(options)
@@ -25,18 +27,18 @@ namespace TodoListApp.Services.Database
 
         public DbSet<NotificationEntity> Notifications => this.Set<NotificationEntity>();
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        protected override void OnModelCreating(ModelBuilder builder)
         {
-            base.OnModelCreating(modelBuilder);
+            base.OnModelCreating(builder);
 
-            _ = modelBuilder?.Entity<TodoListAccessEntity>()
+            _ = builder?.Entity<TodoListAccessEntity>()
                 .HasIndex(x => new { x.TodoListId, x.TargetUserId })
                 .IsUnique();
 
-            _ = modelBuilder?.Entity<TodoInvitationEntity>()
+            _ = builder?.Entity<TodoInvitationEntity>()
                 .HasIndex(x => new { x.TodoListId, x.ReceiverUserId });
 
-            _ = modelBuilder?.Entity<TodoTaskEntity>()
+            _ = builder?.Entity<TodoTaskEntity>()
                 .HasOne(t => t.TodoList)
                 .WithMany(l => l.TodoTasks)
                 .HasForeignKey(t => t.TodoListId)
