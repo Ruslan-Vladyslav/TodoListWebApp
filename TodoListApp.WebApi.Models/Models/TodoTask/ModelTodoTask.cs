@@ -34,9 +34,15 @@ public class ModelTodoTask
 
     public string? AssignedUserId { get; set; }
 
+    public string? AssignedUserName { get; set; }
+
     public int TodoListId { get; set; }
 
     public IEnumerable<ModelTodoTag> Tags { get; set; } = new List<ModelTodoTag>();
 
     public IEnumerable<ModelTodoComment> Comments { get; set; } = new List<ModelTodoComment>();
+
+    public string? ListOwnerId { get; set; }
+
+    public bool IsShared { get; set; }
 }
