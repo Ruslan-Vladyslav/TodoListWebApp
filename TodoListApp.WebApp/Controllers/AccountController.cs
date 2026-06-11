@@ -1,131 +1,162 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using TodoListApp.Services.Interfaces;
+using TodoListApp.WebApi.Models.Models.Auth;
 using TodoListApp.WebApi.Models.Models.Identity;
 using TodoListApp.WebApp.Models.Account;
-using TodoListApp.WebApp.Services.Email;
 
 namespace TodoListApp.WebApp.Controllers;
 
+[Authorize]
 public class AccountController : Controller
 {
-    private readonly UserManager<IdentityUser> _userManager;
-    private readonly SignInManager<IdentityUser> _signInManager;
-    private readonly EmailService _emailService;
+    private readonly IAuthService _authService;
+    private readonly IUserService _userService;
 
-    public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, EmailService emailService)
+    public AccountController(
+        IAuthService authService,
+        IUserService userService)
     {
-        this._userManager = userManager;
-        this._signInManager = signInManager;
-        this._emailService = emailService;
+        _authService = authService;
+        _userService = userService;
     }
 
-    [Authorize]
-    public async Task<IActionResult> Profile()
-    {
-        var user = await this._userManager.GetUserAsync(this.User);
-        if (user == null)
-        {
-            return this.RedirectToAction("Login");
-        }
-
-        var model = new ModelProfile
-        {
-            Username = user.UserName!,
-            Email = user.Email!,
-        };
-
-        return this.View(model);
-    }
-
+    [HttpGet]
+    [AllowAnonymous]
     public IActionResult Register()
     {
         return this.View();
     }
 
     [HttpPost]
-    [ValidateAntiForgeryToken]
+    [AllowAnonymous]
     public async Task<IActionResult> Register(ModelRegister model)
     {
-        if (!this.ModelState.IsValid)
+        if (!ModelState.IsValid)
         {
-            return this.View(model);
+            return View(model);
         }
 
-        var user = new IdentityUser { UserName = model!.Username, Email = model.Email };
-        var result = await this._userManager.CreateAsync(user, model.Password);
-
-        if (result.Succeeded)
+        var result = await _authService.RegisterAsync(new UserRegisterRequest
         {
-            return this.RedirectToAction("Login", "Account");
+            Email = model.Email,
+            Password = model.Password
+        });
+
+        if (result.IsSuccessful)
+        {
+            return RedirectToAction("Login");
         }
 
-        foreach (var error in result.Errors)
-        {
-            this.ModelState.AddModelError("", error.Description);
-        }
-
-        return this.View(model);
+        ModelState.AddModelError("", result.ErrorMessage ?? "Registration failed.");
+        return View(model);
     }
 
+    [HttpGet]
+    [AllowAnonymous]
     public IActionResult Login()
     {
         return this.View();
     }
 
     [HttpPost]
-    [ValidateAntiForgeryToken]
+    [AllowAnonymous]
     public async Task<IActionResult> Login(ModelLogin model)
     {
-        if (!this.ModelState.IsValid)
+        if (!ModelState.IsValid)
         {
-            return this.View(model);
+            return View(model);
         }
 
-        var user = await this._userManager.FindByEmailAsync(model.Email);
-        if (user != null)
+        var result = await _authService.LoginAsync(new UserLoginRequest
         {
-            var result = await this._signInManager.PasswordSignInAsync(user.UserName, model.Password, model.RememberMe, false);
+            Email = model.Email,
+            Password = model.Password
+        });
 
-            if (result.Succeeded)
+        if (result.IsSuccessful)
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var jwt = handler.ReadJwtToken(result.Token);
+
+            var userId = jwt.Claims.First(x => x.Type == JwtRegisteredClaimNames.Sub).Value;
+            var email = jwt.Claims.First(x => x.Type == JwtRegisteredClaimNames.Email).Value;
+            var name = jwt.Claims.First(x => x.Type == ClaimTypes.Name).Value;
+
+            var claims = new List<Claim>
             {
-                return this.RedirectToAction("Index", "Home");
-            }
+                new Claim(ClaimTypes.NameIdentifier, userId),
+                new Claim(ClaimTypes.Name, name),
+                new Claim(ClaimTypes.Email, email)
+            };
+
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                principal);
+
+            Response.Cookies.Append("jwt", result.Token);
+
+            return RedirectToAction("Index", "Home");
         }
 
-        return this.View(model);
+        ModelState.AddModelError("", result.ErrorMessage ?? "Invalid login attempt.");
+        return View(model);
     }
-
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
-        await this._signInManager.SignOutAsync();
-        return this.RedirectToAction("Index", "Home");
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        Response.Cookies.Delete("jwt");
+        return RedirectToAction("Index", "Home");
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete()
     {
-        var user = await this._userManager.GetUserAsync(this.User);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return RedirectToAction("Index", "Home");
+        }
+
+        var user = await _userService.GetByIdAsync(userId);
+
         if (user == null)
         {
-            return this.RedirectToAction("Index", "Home");
+            return RedirectToAction("Index", "Home");
         }
 
-        var result = await this._userManager.DeleteAsync(user);
+        await _userService.DeleteAsync(userId);
 
-        if (result.Succeeded)
+        return RedirectToAction("Logout");
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Profile()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
         {
-            await this._signInManager.SignOutAsync();
-            return this.RedirectToAction("Index", "Home");
+            return RedirectToAction("Login");
         }
 
-        foreach (var error in result.Errors)
+        var user = await _userService.GetByIdAsync(userId);
+
+        if (user == null)
         {
-            this.ModelState.AddModelError("", error.Description);
+            return RedirectToAction("Login");
         }
 
         var model = new ModelProfile
@@ -134,15 +165,20 @@ public class AccountController : Controller
             Email = user.Email!
         };
 
-        return this.View("Profile", model);
+        return View(model);
     }
 
-
-    [Authorize]
     [HttpGet]
     public async Task<IActionResult> EditProfile()
     {
-        var user = await _userManager.GetUserAsync(User);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return RedirectToAction("Login");
+        }
+
+        var user = await _userService.GetByIdAsync(userId);
 
         if (user == null)
         {
@@ -158,7 +194,6 @@ public class AccountController : Controller
         return View(model);
     }
 
-    [Authorize]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditProfile(EditProfileViewModel model)
@@ -168,82 +203,102 @@ public class AccountController : Controller
             return View(model);
         }
 
-        var user = await _userManager.GetUserAsync(User);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        if (user == null)
+        if (string.IsNullOrEmpty(userId))
         {
             return RedirectToAction("Login");
         }
 
-        var existingUser = await _userManager.FindByNameAsync(model.Username);
+        var currentUser = await _userService.GetByIdAsync(userId);
 
-        if (existingUser != null && existingUser.Id != user.Id)
+        if (currentUser == null)
         {
-            ModelState.AddModelError("Username", "Username already taken");
-            return View(model);
+            return RedirectToAction("Login");
         }
 
-        user.UserName = model.Username;
-
-        var result = await _userManager.UpdateAsync(user);
-
-        if (!result.Succeeded)
+        if (!string.Equals(
+                currentUser.UserName,
+                model.Username,
+                StringComparison.OrdinalIgnoreCase))
         {
-            foreach (var error in result.Errors)
+            var exists = await _userService.UserNameExistsAsync(model.Username);
+
+            if (exists)
             {
-                ModelState.AddModelError("", error.Description);
+                ModelState.AddModelError(
+                    nameof(model.Username),
+                    "Username already taken");
+
+                return View(model);
             }
-            return View(model);
         }
 
-        await _signInManager.RefreshSignInAsync(user);
-        return RedirectToAction("Profile");
+        await _userService.UpdateUserNameAsync(
+            userId,
+            model.Username);
+
+        var email = User.FindFirstValue(ClaimTypes.Email) ?? "";
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId),
+            new Claim(ClaimTypes.Name, model.Username),
+            new Claim(ClaimTypes.Email, email)
+        };
+
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
+
+        await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            principal);
+
+        return RedirectToAction(nameof(Profile));
     }
 
-    [Authorize]
     [HttpGet]
     public IActionResult ChangePassword()
     {
         return View(new EditPasswordViewModel());
     }
 
-    [Authorize]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ChangePassword(EditPasswordViewModel model)
     {
-        var user = await _userManager.GetUserAsync(User);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        if (user == null)
+        if (string.IsNullOrEmpty(userId))
         {
             return RedirectToAction("Login");
         }
 
-        var result = await _userManager.ChangePasswordAsync(
-            user,
+        var success = await _authService.ChangePasswordAsync(
+            userId,
             model.CurrentPassword!,
-            model.NewPassword!
-        );
+            model.NewPassword!);
 
-        if (!result.Succeeded)
+        if (!success)
         {
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(nameof(model.CurrentPassword), "Incorrect current password");
-            }
+            ModelState.AddModelError(
+                nameof(model.CurrentPassword),
+                "Incorrect current password");
 
             return View(model);
         }
+
         return RedirectToAction("Profile");
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public IActionResult ForgotPassword()
     {
         return View();
     }
 
     [HttpPost]
+    [AllowAnonymous]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
     {
@@ -252,42 +307,40 @@ public class AccountController : Controller
             return View(model);
         }
 
-        var user = await _userManager.FindByEmailAsync(model.Email);
+        var token = await _authService.GeneratePasswordResetTokenAsync(model.Email);
 
-        if (user == null)
+        if (string.IsNullOrEmpty(token))
         {
             return View("ForgotPasswordConfirmation");
         }
 
-        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-
-        var link = Url.Action(
+        var callbackUrl = Url.Action(
             "ResetPassword",
             "Account",
-            new { token, email = user.Email },
-            Request.Scheme);
+            new { email = model.Email, token = token },
+            protocol: HttpContext.Request.Scheme);
 
-        await _emailService.SendEmailAsync(
-            user.Email!,
-            "Reset Password",
-            $"Click here to reset password: <a href='{link}'>Reset Password</a>"
-        );
         return View("ForgotPasswordConfirmation");
     }
 
     [HttpGet]
-    public IActionResult ResetPassword(
-    string token,
-    string email)
+    [AllowAnonymous]
+    public IActionResult ResetPassword(string email, string token)
     {
+        if (email == null || token == null)
+        {
+            return BadRequest("Invalid token or email.");
+        }
+
         return View(new ResetPasswordViewModel
         {
-            Token = token,
-            Email = email
+            Email = email,
+            Token = token
         });
     }
 
     [HttpPost]
+    [AllowAnonymous]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
     {
@@ -296,28 +349,25 @@ public class AccountController : Controller
             return View(model);
         }
 
-        var user = await _userManager.FindByEmailAsync(model.Email);
-
-        if (user == null)
-        {
-            return RedirectToAction("ResetPasswordConfirmation");
-        }
-
-        var result = await _userManager.ResetPasswordAsync(
-            user,
+        var result = await _authService.ResetPasswordAsync(
+            model.Email,
             model.Token,
             model.NewPassword
         );
 
-        if (!result.Succeeded)
+        if (result)
         {
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError("", error.Description);
-            }
-
-            return View(model);
+            return RedirectToAction("ResetPasswordConfirmation");
         }
-        return RedirectToAction("Login");
+
+        ModelState.AddModelError(string.Empty, "Password reset failed.");
+        return View(model);
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult ResetPasswordConfirmation()
+    {
+        return View();
     }
 }

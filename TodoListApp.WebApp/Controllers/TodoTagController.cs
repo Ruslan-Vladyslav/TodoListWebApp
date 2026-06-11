@@ -1,5 +1,5 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.WebApi.Models.Models.TodoTask;
@@ -11,42 +11,39 @@ namespace TodoListApp.WebApp.Controllers;
 public class TodoTagController : Controller
 {
     private readonly ITodoTagService _todoTagService;
-    private readonly UserManager<IdentityUser> _userManager;
+    private readonly IUserService _userService;
 
-    public TodoTagController(ITodoTagService todoTagService, UserManager<IdentityUser> userManager)
+    public TodoTagController(ITodoTagService todoTagService, IUserService userService)
     {
         this._todoTagService = todoTagService;
-        this._userManager = userManager;
+        this._userService = userService;
     }
 
     public async Task<IActionResult> Index(int? tagId, int page = 1)
     {
         var pageSize = 6;
-        var userId = _userManager.GetUserId(User);
-        var tags = await _todoTagService.GetAllTagsAsync(page, pageSize);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        var all = tagId.HasValue
-            ? await _todoTagService.GetTasksByTagAsync(tagId.Value)
+        var tags = await _todoTagService.GetAllTagsAsync(1, 100);
+        ViewBag.Tags = tags;
+
+        var allTasks = tagId.HasValue
+            ? await _todoTagService.GetTasksByTagAsync(tagId.Value, userId)
             : Enumerable.Empty<ModelTodoTask>();
-        all = all.Where(t => t.UserId == userId);
 
-        var totalPages = (int)Math.Ceiling(all.Count() / (double)pageSize);
+        var totalCount = allTasks.Count();
 
-        var tasks = all
+        var pagedTasks = allTasks
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToList();
 
-        ViewBag.Tags = tags;
-
-        return this.View(new TasksPartialViewModel
+        return View(new TasksPartialViewModel
         {
-            Tasks = tasks,
+            Tasks = pagedTasks,
             CurrentPage = page,
-            TotalPages = totalPages,
-            TagId = tagId,
-            Action = "Index",
-            Controller = "TodoTag",
+            TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+            TagId = tagId
         });
     }
 }

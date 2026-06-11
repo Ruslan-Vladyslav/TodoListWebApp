@@ -1,5 +1,5 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.WebApi.Models.Models.TodoList;
@@ -10,63 +10,54 @@ namespace TodoListApp.WebApp.Controllers;
 public class TodoListController : Controller
 {
     private readonly ITodoListService _todoListService;
-    private readonly UserManager<IdentityUser> _userManager;
+    private readonly IAccessService _accessService;
 
     private readonly int pageSize = 8;
 
-    public TodoListController(ITodoListService todoListService, UserManager<IdentityUser> userManager)
+    public TodoListController(ITodoListService todoListService, IAccessService accessService)
     {
         this._todoListService = todoListService;
-        this._userManager = userManager;
+        this._accessService = accessService;
     }
 
     public async Task<IActionResult> Index(int page = 1)
     {
-        var userId = _userManager.GetUserId(User);
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        if (string.IsNullOrEmpty(userId))
-        {
-            return Challenge();
-        }
+        ViewBag.CurrentUserId = currentUserId;
 
-        var allLists = await _todoListService.GetAllListByUserAsync(1, int.MaxValue, userId);
+        var allLists =
+            await _todoListService.GetAllListByUserAsync(
+                page,
+                pageSize,
+                currentUserId);
 
-        var user = await _userManager.GetUserAsync(User);
-        var userName = user?.UserName;
-
-        foreach (var list in allLists)
-        {
-            list.UserName = userName;
-        }
-
-        var paged = allLists
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
+        var paged = allLists.Items.ToList();
 
         ViewBag.CurrentPage = page;
-        ViewBag.TotalPages = (int)Math.Ceiling(allLists.Count() / (double)pageSize);
+        ViewBag.TotalPages = allLists.TotalPages;
 
         return View(paged);
     }
 
     public async Task<IActionResult> Details(int id)
     {
-        if (!this.ModelState.IsValid)
-        {
-            return this.View("Error");
-        }
-        var list = await this._todoListService.GetByIdListAsync(id);
+        var list = await _todoListService.GetByIdListAsync(id);
 
         if (list == null)
         {
             return NotFound();
         }
 
-        var user = await _userManager.GetUserAsync(User);
-        list.UserName = user?.UserName;
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        return this.View(list);
+        var role = await _accessService.GetUserRoleAsync(
+            currentUserId!,
+            list.Id);
+
+        ViewBag.Role = role;
+
+        return View(list);
     }
 
     public IActionResult Create()
@@ -78,12 +69,7 @@ public class TodoListController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CreateTodoList model)
     {
-        if (!this.ModelState.IsValid)
-        {
-            return this.View(model);
-        }
-
-        model.UserId = _userManager.GetUserId(User);
+        model.UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         _ = await this._todoListService.CreateListAsync(model);
         return this.RedirectToAction(nameof(Index));
@@ -91,37 +77,35 @@ public class TodoListController : Controller
 
     public async Task<IActionResult> Edit(int id)
     {
-        if (!this.ModelState.IsValid)
-        {
-            return this.View("Error");
-        }
-
-        var list = await this._todoListService.GetByIdListAsync(id);
+        var list = await _todoListService.GetByIdListAsync(id);
 
         if (list == null)
         {
-            return this.NotFound();
+            return NotFound();
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (list.UserId != userId)
+        {
+            return Forbid();
         }
 
         var updateModel = new UpdateTodoList
         {
-            Title = list.Title!,
-            Description = list.Description!,
+            Id = list.Id,
+            Title = list.Title,
+            Description = list.Description
         };
 
-        return this.View(updateModel);
+        return View(updateModel);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, UpdateTodoList model)
     {
-        if (!ModelState.IsValid)
-        {
-            return View(model);
-        }
-
-        var userId = _userManager.GetUserId(User);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var list = await _todoListService.GetByIdListAsync(id);
 
         if (list == null)
@@ -140,30 +124,43 @@ public class TodoListController : Controller
 
     public async Task<IActionResult> DeleteConfirm(int id)
     {
-        if (!this.ModelState.IsValid)
-        {
-            return this.View("Error");
-        }
-
-        var list = await this._todoListService.GetByIdListAsync(id);
+        var list = await _todoListService.GetByIdListAsync(id);
 
         if (list == null)
         {
-            return this.NotFound();
+            return NotFound();
         }
 
-        return this.View(list);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (list.UserId != userId)
+        {
+            return Forbid();
+        }
+
+        return View(list);
     }
 
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
-        if (!this.ModelState.IsValid)
+        var list = await _todoListService.GetByIdListAsync(id);
+
+        if (list == null)
         {
-            return this.View("Error");
+            return NotFound();
         }
-        await this._todoListService.DeleteListAsync(id);
-        return this.RedirectToAction(nameof(Index));
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (list.UserId != userId)
+        {
+            return Forbid();
+        }
+
+        await _todoListService.DeleteListAsync(id);
+
+        return RedirectToAction(nameof(Index));
     }
 }
