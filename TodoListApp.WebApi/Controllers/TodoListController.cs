@@ -88,6 +88,12 @@ public class TodoListController : ControllerBase
             return NotFound();
         }
 
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (existing.UserId != userId)
+        {
+            return Forbid();
+        }
+
         await this._todoListService.UpdateListAsync(id, model);
 
         return NoContent();
@@ -100,6 +106,12 @@ public class TodoListController : ControllerBase
         if (existing == null)
         {
             return NotFound();
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (existing.UserId != userId)
+        {
+            return Forbid();
         }
 
         await this._todoListService.DeleteListAsync(id);

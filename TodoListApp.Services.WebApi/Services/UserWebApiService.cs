@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.WebApi.Models.Models.User;
@@ -49,8 +50,38 @@ public class UserWebApiService : IUserService
 
     public async Task<UserModel?> GetByEmailAsync(string email)
     {
-        return await SendAsync<UserModel>(
-            () => _http.GetAsync($"{BaseRoute}/by-email/{email}"));
+        var response = await _http.GetAsync(
+            $"{BaseRoute}/by-email/{Uri.EscapeDataString(email)}");
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+        }
+
+        return await response.Content.ReadFromJsonAsync<UserModel>();
+    }
+
+    public async Task<UserModel?> GetByUserNameAsync(string userName)
+    {
+        var response = await _http.GetAsync(
+            $"{BaseRoute}/by-username/{Uri.EscapeDataString(userName)}");
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+        }
+
+        return await response.Content.ReadFromJsonAsync<UserModel>();
     }
 
     public async Task<Dictionary<string, string?>> GetUsersByIdsAsync(List<string> ids)
@@ -70,10 +101,14 @@ public class UserWebApiService : IUserService
         string userId,
         string userName)
     {
-        await SendAsync<object>(
-            () => _http.PutAsJsonAsync(
-                $"{BaseRoute}/{userId}/username",
-                userName));
+        var response = await _http.PutAsJsonAsync(
+            $"{BaseRoute}/{userId}/username",
+            userName);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+        }
     }
 
     public async Task<bool> UserNameExistsAsync(

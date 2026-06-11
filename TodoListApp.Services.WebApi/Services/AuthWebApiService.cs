@@ -12,14 +12,26 @@ public class AuthWebApiService : IAuthService
     }
 
     public async Task<AuthResponse> RegisterAsync(UserRegisterRequest request)
-        => await _http.PostAsJsonAsync("Auth/register", request)
-            .ContinueWith(r => r.Result.Content.ReadFromJsonAsync<AuthResponse>())
-            .Unwrap();
+    {
+        var response = await _http.PostAsJsonAsync("Auth/register", request);
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            return new AuthResponse { IsSuccessful = false, ErrorMessage = error };
+        }
+        return (await response.Content.ReadFromJsonAsync<AuthResponse>())!;
+    }
 
     public async Task<AuthResponse> LoginAsync(UserLoginRequest request)
-        => await _http.PostAsJsonAsync("Auth/login", request)
-            .ContinueWith(r => r.Result.Content.ReadFromJsonAsync<AuthResponse>())
-            .Unwrap();
+    {
+        var response = await _http.PostAsJsonAsync("Auth/login", request);
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            return new AuthResponse { IsSuccessful = false, ErrorMessage = error };
+        }
+        return (await response.Content.ReadFromJsonAsync<AuthResponse>())!;
+    }
 
     public async Task<bool> ChangePasswordAsync(string userId, string currentPassword, string newPassword)
     {
@@ -31,8 +43,19 @@ public class AuthWebApiService : IAuthService
 
     public async Task<string?> GeneratePasswordResetTokenAsync(string email)
     {
-        var res = await _http.PostAsJsonAsync("Auth/reset-token", email);
-        return await res.Content.ReadFromJsonAsync<string>();
+        var res = await _http.PostAsJsonAsync("Auth/reset-token", new
+        {
+            email
+        });
+
+        if (!res.IsSuccessStatusCode)
+        {
+            var error = await res.Content.ReadAsStringAsync();
+            Console.WriteLine(error);
+            return null;
+        }
+
+        return await res.Content.ReadAsStringAsync();
     }
 
     public async Task<bool> ResetPasswordAsync(string email, string token, string newPassword)

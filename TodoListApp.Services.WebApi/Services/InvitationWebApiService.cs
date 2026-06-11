@@ -45,6 +45,19 @@ public class InvitationWebApiService : IInvitationService
             this.httpClient.PostAsJsonAsync($"{BaseRoute}/send", request));
     }
 
+    public async Task<bool> HasPendingInvitationAsync(int listId, string receiverId)
+    {
+        var response = await this.httpClient.GetAsync(
+            $"{BaseRoute}/pending?listId={listId}&receiverId={Uri.EscapeDataString(receiverId)}");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return false;
+        }
+
+        return await response.Content.ReadFromJsonAsync<bool>();
+    }
+
     public async Task AcceptInvitationAsync(int invitationId)
     {
         await SendNoContentAsync(() =>

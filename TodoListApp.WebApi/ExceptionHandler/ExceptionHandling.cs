@@ -73,6 +73,11 @@ internal class ExceptionHandling
                 message = ex.Message;
                 break;
 
+            case InvalidOperationException:
+                status = HttpStatusCode.BadRequest;
+                message = ex.Message;
+                break;
+
             case TimeoutException:
                 status = HttpStatusCode.GatewayTimeout;
                 message = "Operation timed out.";

@@ -16,10 +16,24 @@ public class TodoTaskWebApiService : ITodoTaskService
         this.httpClient = client;
     }
 
-    public Task<ModelTodoTask> CreateTaskAsync(CreateTodoTask item)
+    public async Task<ModelTodoTask> CreateTaskAsync(CreateTodoTask item)
     {
-        return SendAsync<ModelTodoTask>(() =>
-                    httpClient.PostAsJsonAsync(BaseRoute, item))!;
+        var response = await this.httpClient.PostAsJsonAsync(BaseRoute, item);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"{response.StatusCode}: {error}");
+        }
+
+        try
+        {
+            return (await response.Content.ReadFromJsonAsync<ModelTodoTask>())!;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return new ModelTodoTask();
+        }
     }
 
     public Task DeleteTaskAsync(int id, string userId)

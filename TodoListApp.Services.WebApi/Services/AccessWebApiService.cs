@@ -1,4 +1,6 @@
+using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.WebApi.Models.Enums;
 using TodoListApp.WebApi.Models.Models.Access;
@@ -39,10 +41,15 @@ public class AccessWebApiService : IAccessService
             ?? Enumerable.Empty<ModelTodoListAccess>();
     }
 
-    public async Task<TodoListRole> GetUserRoleAsync(string userId, int listId)
+    public async Task<TodoListRole?> GetUserRoleAsync(string userId, int listId)
     {
         var response = await httpClient.GetAsync(
             $"{BaseRoute}/role?listId={listId}");
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Forbidden || response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
 
         if (!response.IsSuccessStatusCode)
         {
@@ -50,9 +57,18 @@ public class AccessWebApiService : IAccessService
             throw new HttpRequestException($"{response.StatusCode}: {error}");
         }
 
-        var role = await response.Content.ReadFromJsonAsync<TodoListRole?>();
+        if (response.StatusCode == HttpStatusCode.NoContent)
+        {
+            return null;
+        }
 
-        return role ?? TodoListRole.Viewer;
+        var content = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<TodoListRole?>(content);
     }
 
     private static async Task<T?> SendAsync<T>(Func<Task<HttpResponseMessage>> action)
@@ -77,5 +93,13 @@ public class AccessWebApiService : IAccessService
             var error = await response.Content.ReadAsStringAsync();
             throw new HttpRequestException($"{response.StatusCode}: {error}");
         }
+    }
+
+    public Task UpdateRoleAsync(string ownerUserId, string targetUserId, int listId, TodoListRole newRole)
+    {
+        return SendNoContentAsync(() =>
+            httpClient.PutAsync(
+                $"{BaseRoute}/role?targetUserId={targetUserId}&listId={listId}&newRole={(int)newRole}",
+                null));
     }
 }

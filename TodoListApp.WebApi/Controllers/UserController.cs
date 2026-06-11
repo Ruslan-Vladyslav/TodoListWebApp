@@ -37,8 +37,20 @@ public class UserController : ControllerBase
     [HttpGet("by-email/{email}")]
     public async Task<IActionResult> GetByEmail(string email)
     {
-        var user = await _userService.GetAllAsync();
-        var result = user.FirstOrDefault(x => x.Email == email);
+        var result = await _userService.GetByEmailAsync(email);
+
+        if (result == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(result);
+    }
+
+    [HttpGet("by-username/{userName}")]
+    public async Task<IActionResult> GetByUserName(string userName)
+    {
+        var result = await _userService.GetByUserNameAsync(userName);
 
         if (result == null)
         {

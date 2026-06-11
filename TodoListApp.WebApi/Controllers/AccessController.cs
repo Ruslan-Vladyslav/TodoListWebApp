@@ -65,4 +65,17 @@ public class AccessController : ControllerBase
         var role = await this._service.GetUserRoleAsync(userId!, listId);
         return Ok(role);
     }
+
+    [HttpPut("role")]
+    public async Task<IActionResult> UpdateRole(
+        [FromQuery] string targetUserId,
+        [FromQuery] int listId,
+        [FromQuery] TodoListRole newRole)
+    {
+        var ownerUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        await this._service.UpdateRoleAsync(ownerUserId!, targetUserId, listId, newRole);
+
+        return NoContent();
+    }
 }

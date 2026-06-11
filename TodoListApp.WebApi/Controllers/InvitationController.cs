@@ -33,6 +33,15 @@ public class InvitationController : ControllerBase
         return Ok();
     }
 
+    [HttpGet("pending")]
+    public async Task<IActionResult> HasPending(
+        [FromQuery] int listId,
+        [FromQuery] string receiverId)
+    {
+        var hasPending = await this._service.HasPendingInvitationAsync(listId, receiverId);
+        return Ok(hasPending);
+    }
+
     [HttpPost("accept/{id}")]
     public async Task<IActionResult> Accept(int id)
     {

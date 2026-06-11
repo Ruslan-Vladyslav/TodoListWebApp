@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.WebApi.Models.Models.Auth;
@@ -52,9 +51,9 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("reset-token")]
-    public async Task<IActionResult> GenerateResetToken([FromBody] string email)
+    public async Task<IActionResult> GenerateResetToken([FromBody] ResetTokenRequest request)
     {
-        var token = await _authService.GeneratePasswordResetTokenAsync(email);
+        var token = await _authService.GeneratePasswordResetTokenAsync(request.Email);
 
         if (token == null)
         {
