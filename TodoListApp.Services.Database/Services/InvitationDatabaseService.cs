@@ -10,15 +10,18 @@ public class InvitationDatabaseService : IInvitationService
     private readonly TodoListDbContext _context;
     private readonly IAccessService _accessService;
     private readonly INotificationService _notificationService;
+    private readonly IUserService _userService;
 
     public InvitationDatabaseService(
         TodoListDbContext context,
         IAccessService accessService,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IUserService userService)
     {
         this._context = context;
         this._accessService = accessService;
         this._notificationService = notificationService;
+        this._userService = userService;
     }
 
     public async Task SendInvitationAsync(
@@ -96,6 +99,15 @@ public class InvitationDatabaseService : IInvitationService
             list.Id));
     }
 
+    public async Task<bool> HasPendingInvitationAsync(int listId, string receiverId)
+    {
+        return await this._context.TodoInvitations
+            .AnyAsync(x =>
+                x.TodoListId == listId &&
+                x.ReceiverUserId == receiverId &&
+                x.Status == InvitationStatus.Pending);
+    }
+
     public async Task AcceptInvitationAsync(int invitationId)
     {
         using var transaction = await this._context.Database.BeginTransactionAsync();
@@ -123,10 +135,12 @@ public class InvitationDatabaseService : IInvitationService
             invite.TodoListId,
             invite.Role);
 
+        var receiverName = await this._userService.GetUserNameAsync(invite.ReceiverUserId) ?? "Unknown";
+
         _ = await this._notificationService.CreateAsync(
             NotificationFactory.InvitationAccepted(
             invite.SenderUserId,
-            invite.ReceiverUserId,
+            receiverName,
             invite.TodoList.Title,
             invite.TodoListId));
 
@@ -160,16 +174,29 @@ public class InvitationDatabaseService : IInvitationService
 
         await this._context.SaveChangesAsync();
 
+        var receiverName = await this._userService.GetUserNameAsync(invite.ReceiverUserId) ?? "Unknown";
+
         _ = await this._notificationService.CreateAsync(
             NotificationFactory.InvitationRejected(
             invite.SenderUserId,
-            invite.ReceiverUserId,
+            receiverName,
             invite.TodoList.Title,
             invite.TodoListId));
     }
 
     public async Task<IEnumerable<ModelInvitation>> GetUserInvitationsAsync(string userId)
     {
+        var cutoffDate = DateTime.UtcNow.AddDays(-3);
+        var oldInvitations = await this._context.TodoInvitations
+            .Where(x => x.ReceiverUserId == userId && x.RespondedAt != null && x.RespondedAt < cutoffDate)
+            .ToListAsync();
+
+        if (oldInvitations.Any())
+        {
+            this._context.TodoInvitations.RemoveRange(oldInvitations);
+            await this._context.SaveChangesAsync();
+        }
+
         var items = await this._context.TodoInvitations
             .Include(x => x.TodoList)
             .Where(x => x.ReceiverUserId == userId)

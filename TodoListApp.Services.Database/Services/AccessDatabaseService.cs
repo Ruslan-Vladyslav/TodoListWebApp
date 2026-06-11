@@ -86,8 +86,29 @@ public class AccessDatabaseService : IAccessService
             return;
         }
 
-        _context.TodoListAccesses.Remove(access);
-        await _context.SaveChangesAsync();
+        using var transaction = await this._context.Database.BeginTransactionAsync();
+
+        try
+        {
+            var tasksToReassign = await this._context.TodoTasks
+                .Where(t => t.TodoListId == listId && t.AssignedToUserId == targetUserId)
+                .ToListAsync();
+
+            foreach (var task in tasksToReassign)
+            {
+                task.AssignedToUserId = ownerUserId;
+            }
+
+            _context.TodoListAccesses.Remove(access);
+            await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task<IEnumerable<ModelTodoListAccess>> GetAccessListAsync(int listId)
@@ -107,7 +128,7 @@ public class AccessDatabaseService : IAccessService
         });
     }
 
-    public async Task<TodoListRole> GetUserRoleAsync(string userId, int listId)
+    public async Task<TodoListRole?> GetUserRoleAsync(string userId, int listId)
     {
         var list = await this._context.TodoLists
             .AsNoTracking()
@@ -115,7 +136,7 @@ public class AccessDatabaseService : IAccessService
 
         if (list == null)
         {
-            return TodoListRole.Viewer;
+            return null;
         }
 
         if (list.UserId == userId)
@@ -131,6 +152,43 @@ public class AccessDatabaseService : IAccessService
                 x.Accepted)
             .FirstOrDefaultAsync();
 
-        return access?.Role ?? TodoListRole.Viewer;
+        if (access == null)
+        {
+            return null;
+        }
+
+        return access.Role;
+    }
+
+    public async Task UpdateRoleAsync(
+        string ownerUserId,
+        string targetUserId,
+        int listId,
+        TodoListRole newRole)
+    {
+        var list = await this._context.TodoLists
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == listId)
+            ?? throw new KeyNotFoundException();
+
+        if (list.UserId != ownerUserId)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        if (targetUserId == ownerUserId)
+        {
+            throw new InvalidOperationException("Cannot change the owner's role.");
+        }
+
+        var access = await this._context.TodoListAccesses
+            .FirstOrDefaultAsync(x =>
+                x.TodoListId == listId &&
+                x.TargetUserId == targetUserId &&
+                x.Accepted)
+            ?? throw new KeyNotFoundException("User does not have access to this list.");
+
+        access.Role = newRole;
+        await this._context.SaveChangesAsync();
     }
 }

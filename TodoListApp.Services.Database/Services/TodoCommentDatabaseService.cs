@@ -7,14 +7,15 @@ namespace TodoListApp.Services.Database.Services;
 
 public class TodoCommentDatabaseService : ITodoCommentService
 {
+    private readonly IUserService _userService;
     private readonly INotificationService _notificationService;
     private readonly TodoListDbContext _context;
 
-    public TodoCommentDatabaseService(TodoListDbContext context, INotificationService notificationService)
+    public TodoCommentDatabaseService(TodoListDbContext context, INotificationService notificationService, IUserService userService)
     {
         this._context = context;
         this._notificationService = notificationService;
-
+        this._userService = userService;
     }
 
     public async Task<ModelTodoComment> CreateCommentAsync(int taskId, CreateTodoComment comment)
@@ -57,6 +58,8 @@ public class TodoCommentDatabaseService : ITodoCommentService
             _ = recipients.Add(task.AssignedToUserId);
         }
 
+        var senderName = await this._userService.GetUserNameAsync(comment.UserId) ?? "Unknown";
+
         foreach (var userId in recipients)
         {
             _ = await this._notificationService.CreateAsync(
@@ -64,7 +67,7 @@ public class TodoCommentDatabaseService : ITodoCommentService
                     userId,
                     task.Title,
                     task.Id,
-                    senderName: comment.UserId));
+                    senderName: senderName));
         }
 
         return new ModelTodoComment

@@ -34,7 +34,7 @@ public class TodoTaskDatabaseService : ITodoTaskService
             item.UserId!,
             item.TodoListId);
 
-        if (role == TodoListRole.Viewer)
+        if (role == null || role == TodoListRole.Viewer)
         {
             throw new UnauthorizedAccessException();
         }
@@ -44,13 +44,13 @@ public class TodoTaskDatabaseService : ITodoTaskService
             Title = item.Title,
             Description = item.Description,
             DueDate = item.DueDate,
-            CreateDate = DateTime.UtcNow,
+            CreateDate = DateTime.Now,
             CreatedByUserId = item.UserId,
             AssignedToUserId = item.AssignedUserId,
             AssignedByUserId = item.UserId,
             AssignedAt =
                 item.AssignedUserId != null
-                ? DateTime.UtcNow
+                ? DateTime.Now
                 : null,
             Status = item.Status,
             TodoListId = item.TodoListId,
@@ -76,13 +76,14 @@ public class TodoTaskDatabaseService : ITodoTaskService
     {
         var role = await this._accessService.GetUserRoleAsync(userId, todoListId);
 
-        if (role == TodoListRole.Viewer)
+        if (role == null)
         {
             throw new UnauthorizedAccessException();
         }
 
         var tasks = await this._context.TodoTasks
             .AsNoTracking()
+            .Include(t => t.TodoList)
             .Where(t => t.TodoListId == todoListId)
             .Include(t => t.Tags)
             .Include(t => t.Comments)
@@ -95,6 +96,7 @@ public class TodoTaskDatabaseService : ITodoTaskService
     {
         var entity = await this._context.TodoTasks
             .AsNoTracking()
+            .Include(t => t.TodoList)
             .Include(t => t.Tags)
             .Include(t => t.Comments)
             .FirstOrDefaultAsync(t => t.Id == id);
@@ -105,6 +107,12 @@ public class TodoTaskDatabaseService : ITodoTaskService
         }
 
         var role = await this._accessService.GetUserRoleAsync(userId, entity.TodoListId);
+
+        if (role == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
         return Map(entity);
     }
 
@@ -117,7 +125,8 @@ public class TodoTaskDatabaseService : ITodoTaskService
         string? sort)
     {
         IQueryable<TodoTaskEntity> query = this._context.TodoTasks
-            .AsNoTracking();
+            .AsNoTracking()
+            .Include(t => t.TodoList);
 
         if (!string.IsNullOrEmpty(userId))
         {
@@ -174,7 +183,7 @@ public class TodoTaskDatabaseService : ITodoTaskService
             userId,
             entity.TodoListId);
 
-        if (role == TodoListRole.Viewer)
+        if (role == null || role == TodoListRole.Viewer)
         {
             throw new UnauthorizedAccessException();
         }
@@ -203,7 +212,7 @@ public class TodoTaskDatabaseService : ITodoTaskService
         {
             entity.AssignedToUserId = item.AssignedUserId;
             entity.AssignedByUserId = userId;
-            entity.AssignedAt = DateTime.UtcNow;
+            entity.AssignedAt = DateTime.Now;
 
             if (item.AssignedUserId != null)
             {
@@ -243,7 +252,7 @@ public class TodoTaskDatabaseService : ITodoTaskService
 
         var role = await this._accessService.GetUserRoleAsync(userId, entity.TodoListId);
 
-        if (role != TodoListRole.Owner)
+        if (role == null || role != TodoListRole.Owner)
         {
             throw new UnauthorizedAccessException();
         }
@@ -406,6 +415,7 @@ public class TodoTaskDatabaseService : ITodoTaskService
             AssignedUserId = e.AssignedToUserId,
             Status = e.Status,
             TodoListId = e.TodoListId,
+            ListOwnerId = e.TodoList?.UserId,
 
             Tags = e.Tags != null
                 ? e.Tags.Select(t => new ModelTodoTag
@@ -431,6 +441,8 @@ public class TodoTaskDatabaseService : ITodoTaskService
         IQueryable<TodoTaskEntity> query,
         string? userId)
     {
+        query = query.Include(t => t.TodoList);
+
         if (string.IsNullOrEmpty(userId))
         {
             return query;

@@ -11,5 +11,7 @@ public interface IAccessService
 
     Task<IEnumerable<ModelTodoListAccess>> GetAccessListAsync(int listId);
 
-    Task<TodoListRole> GetUserRoleAsync(string userId, int listId);
+    Task<TodoListRole?> GetUserRoleAsync(string userId, int listId);
+
+    Task UpdateRoleAsync(string ownerUserId, string targetUserId, int listId, TodoListRole newRole);
 }

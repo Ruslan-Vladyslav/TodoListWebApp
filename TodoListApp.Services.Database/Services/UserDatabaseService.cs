@@ -75,6 +75,23 @@ public class UserDatabaseService : IUserService
         };
     }
 
+    public async Task<UserModel?> GetByUserNameAsync(string userName)
+    {
+        var user = await _userManager.FindByNameAsync(userName);
+
+        if (user == null)
+        {
+            return null;
+        }
+
+        return new UserModel
+        {
+            Id = user.Id,
+            UserName = user.UserName!,
+            Email = user.Email,
+        };
+    }
+
     public async Task<Dictionary<string, string?>> GetUsersByIdsAsync(List<string> ids)
     {
         if (ids == null || ids.Count == 0)

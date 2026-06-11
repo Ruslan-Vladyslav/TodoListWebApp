@@ -28,7 +28,7 @@ public class TodoTagDatabaseService : ITodoTagService
 
         var role = await this._accessService.GetUserRoleAsync(userId, task.TodoListId);
 
-        if (role == TodoListRole.Viewer)
+        if (role == null || role == TodoListRole.Viewer)
         {
             throw new UnauthorizedAccessException();
         }
@@ -91,7 +91,7 @@ public class TodoTagDatabaseService : ITodoTagService
 
         var role = await this._accessService.GetUserRoleAsync(userId, task.TodoListId);
 
-        if (role == TodoListRole.Viewer)
+        if (role == null || role == TodoListRole.Viewer)
         {
             throw new UnauthorizedAccessException();
         }

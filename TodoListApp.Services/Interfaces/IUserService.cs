@@ -12,6 +12,8 @@ public interface IUserService
 
     Task<UserModel?> GetByEmailAsync(string email);
 
+    Task<UserModel?> GetByUserNameAsync(string userName);
+
     Task<Dictionary<string, string?>> GetUsersByIdsAsync(List<string> ids);
 
     Task UpdateUserNameAsync(string userId, string userName);
