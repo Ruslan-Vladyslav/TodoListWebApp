@@ -1,15 +1,16 @@
+@using TodoListApp.Services.Enums
 @using TodoListApp.WebApi.Models.Helper
 @model TodoListApp.WebApp.Models.TasksPartialViewModel
 
 @if (Model.Tasks != null && Model.Tasks.Any())
 {
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    <div class="row g-3">
 
         @foreach (var task in Model.Tasks)
         {
-            bool isCompleted = task.Status.ToString() == "Completed";
+            bool isCompleted = task.Status == TodoTaskStatus.Completed;
             bool isOverdue = task.DueDate < DateTime.Now && !isCompleted;
-            bool isNotStarted = task.Status.ToString() == "NotStarted";
+            bool isNotStarted = task.Status == TodoTaskStatus.NotStarted;
 
             string borderClass =
             isCompleted ? "border-success" :
@@ -23,32 +24,37 @@
             isNotStarted ? "bg-secondary" :
             "bg-warning text-dark";
 
-            <div class="col">
-                <div class="card h-100 shadow-sm border-3 @borderClass bg-dark text-light">
-                    <div class="card-body p-3">
-
-                        <h5 class="text-clamp-1">@task.Title</h5>
+            <div class="col-12 col-md-6">
+                <div class="glass-card p-3 h-100 border-start border-4 @borderClass transition-all rounded-4">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="fw-bold text-light text-clamp-1">
+                            @task.Title
+                        </h5>
 
                         <span class="badge @badgeClass">
                             @task.Status.GetDisplayName()
                         </span>
-
-                        <p class="text-secondary small mt-2 text-clamp-1">
-                            @(task.Description ?? "No description")
-                        </p>
-
-                        <small>Created: @task.CreateDate</small><br />
-                        <small>Due Date: @task.DueDate.ToShortDateString()</small>
                     </div>
-                    <div class="card-footer bg-transparent border-0 text-end">
+
+                    <p class="text-secondary small text-clamp-2">
+                        @(task.Description ?? "No description")
+                    </p>
+
+                    <div class="d-flex justify-content-between mt-2">
+                        <small class="text-muted">
+                            Due: @task.DueDate.ToShortDateString()
+                        </small>
+
                         <a asp-action="Details"
                            asp-controller="TodoTask"
                            asp-route-id="@task.Id"
-                           class="btn btn-sm btn-outline-info">
-                            <i class="bi bi-info-circle"></i>
+                           class="btn btn-sm btn-outline-info rounded-pill px-3">
+                            Details
                         </a>
                     </div>
+
                 </div>
+
             </div>
         }
 
@@ -82,7 +88,7 @@
                     }
                 </li>
 
-                <li class="page-item shadow-sm">
+                <li class="page-item">
                     <span class="page-link custom-dark">@Model.CurrentPage</span>
                 </li>
 
@@ -114,7 +120,13 @@
 }
 else
 {
-    <div class="alert alert-secondary text-center">
-        No tasks found
+    <div class="d-flex justify-content-center mt-4">
+        <div class="glass-card text-center p-4 px-5 rounded-4"
+             style="max-width: 380px; width: 100%;">
+            <i class="bi bi-card-checklist fs-1 d-block mb-3"></i>
+            <div class="text-secondary">
+                No tasks found
+            </div>
+        </div>
     </div>
 }

@@ -4,123 +4,177 @@
     ViewData["Title"] = "Todo Lists";
 }
 
-<div class="w-100 px-4 pt-4 pb-0">
-    <div class="row g-4">
-        <div class="col-12">
-            <div class="--backgroung-color p-4 rounded-4 shadow">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="fw-bold text-dark">Todo Lists</h2>
+<div class="container-fluid px-4 py-4">
 
-                    <a asp-action="Create" class="btn btn-dark">
-                        <i class="bi bi-plus-circle"></i> New List
-                    </a>
-                </div>
-
-                <hr />
-
-                @if (!Model.Any())
-                {
-                    <div class="alert alert-secondary text-center p-4 rounded-3">
-                        No lists found
-                    </div>
-                }
-                else
-                {
-                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
-                        @foreach (var item in Model)
-                        {
-                            <div class="col">
-
-                                <div class="card h-100 shadow-sm border-3 border-secondary bg-dark text-light">
-
-                                    <div class="card-body">
-
-                                        <h5 class="card-title text-light text-clamp-1">
-                                            @item.Title
-                                        </h5>
-
-                                        <p class="card-text text-secondary small text-clamp-1">
-                                            @item.Description
-                                        </p>
-
-                                        <div class="small text-light text-clamp-1">
-                                            <strong>User:</strong> @item.UserName
-                                        </div>
-                                    </div>
-                                    <div class="card-footer bg-transparent border-0 d-flex justify-content-between align-items-center">
-                                        <div class="text-secondary small d-flex align-items-center gap-1"
-                                             data-bs-toggle="tooltip"
-                                             data-bs-placement="top"
-                                             title="@item.TaskCount tasks">
-
-                                            <span class="badge bg-secondary">
-                                                <i class="bi bi-list-check"></i>
-                                                @item.TaskCount
-                                            </span>
-                                        </div>
-
-                                        <div class="d-flex gap-1">
-                                            <a asp-action="Edit"
-                                                asp-route-id="@item.Id"
-                                                class="btn btn-sm btn-outline-warning">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-
-                                            <a asp-action="Details"
-                                                asp-route-id="@item.Id"
-                                                class="btn btn-sm btn-outline-info">
-                                                <i class="bi bi-info-circle"></i>
-                                            </a>
-
-                                            <a asp-action="DeleteConfirm"
-                                                asp-route-id="@item.Id"
-                                                class="btn btn-sm btn-outline-danger">
-                                                <i class="bi bi-trash"></i>
-                                            </a>
-
-                                            <a asp-action="TasksByList"
-                                                asp-controller="TodoTask"
-                                                asp-route-todoListId="@item.Id"
-                                                class="btn btn-sm btn-outline-secondary">
-                                                <i class="bi bi-card-checklist"></i>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="font-outfit fw-bold mb-1">
+                <i class="bi bi-card-checklist"></i> Todo Lists
+            </h2>
+            <div class="text-secondary">
+                Manage your personal and shared lists
             </div>
         </div>
+
+        <div class="d-flex gap-2">
+            <a asp-action="Create"
+               class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-plus-circle me-1"></i> New List
+            </a>
+
+            <a asp-controller="TodoListShare"
+               asp-action="SharedWithMe"
+               class="btn btn-outline-info rounded-pill px-4">
+                <i class="bi bi-share me-1"></i> Shared With Me
+            </a>
+        </div>
     </div>
+
+    <hr class="border-secondary mb-4" />
+
+    @if (!Model.Any())
+    {
+        <div class="glass-card text-center p-5 rounded-4">
+            <i class="bi bi-inboxes fs-1"></i>
+            <div class="mt-3 text-secondary">
+                No todo lists yet
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-4">
+            @foreach (var item in Model)
+            {
+                <div class="col">
+                    <div class="glass-card h-100 p-3 d-flex flex-column justify-content-between list-card">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="fw-bold mb-0 text-light text-clamp-1">
+                                    @item.Title
+                                </h5>
+
+                                @if (item.UserId == (string)ViewBag.CurrentUserId)
+                                {
+                                    <span class="badge bg-success">Owner</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-info">Shared</span>
+                                }
+                            </div>
+
+                            <p class="text-secondary small text-clamp-2 mb-3">
+                                @item.Description
+                            </p>
+
+                            <div class="d-flex flex-column gap-1">
+
+                                <span class="badge bg-secondary align-self-start">
+                                    Tasks: @item.TaskCount
+                                </span>
+
+                                <span class="badge bg-secondary align-self-start">
+                                    Members: @item.MemberCount
+                                </span>
+
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end mt-3 flex-wrap">
+
+                            <a asp-action="Details"
+                               asp-route-id="@item.Id"
+                               class="btn btn-sm btn-outline-info"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="View Details">
+                                <i class="bi bi-eye"></i>
+                            </a>
+
+                            <a asp-action="TasksByList"
+                               asp-controller="TodoTask"
+                               asp-route-todoListId="@item.Id"
+                               class="btn btn-sm btn-outline-light"
+                               data-bs-toggle="tooltip"
+                               title="Open Tasks">
+                                <i class="bi bi-list-task"></i>
+                            </a>
+
+                            <a asp-controller="TodoListShare"
+                               asp-action="Members"
+                               asp-route-id="@item.Id"
+                               class="btn btn-sm btn-outline-secondary"
+                               data-bs-toggle="tooltip"
+                               title="Members">
+                                <i class="bi bi-people"></i>
+                            </a>
+
+                            @if (item.UserId == (string)ViewBag.CurrentUserId)
+                            {
+                                <a asp-action="Edit"
+                                   asp-route-id="@item.Id"
+                                   class="btn btn-sm btn-outline-warning"
+                                   data-bs-toggle="tooltip"
+                                   title="Edit List">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+
+                                <a asp-controller="TodoListShare"
+                                   asp-action="Share"
+                                   asp-route-id="@item.Id"
+                                   class="btn btn-sm btn-primary"
+                                   data-bs-toggle="tooltip"
+                                   title="Share List">
+                                    <i class="bi bi-share"></i>
+                                </a>
+
+                                <a asp-action="DeleteConfirm"
+                                   asp-route-id="@item.Id"
+                                   class="btn btn-sm btn-outline-danger"
+                                   data-bs-toggle="tooltip"
+                                   title="Delete List">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            }
+
+                        </div>
+                    </div>
+                </div>
+            }
+
+        </div>
+    }
+
+    @if (ViewBag.TotalPages > 1)
+    {
+        <nav aria-label="TodoList pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+
+                <li class="page-item @(ViewBag.CurrentPage == 1 ? "disabled" : "")">
+                    <a class="page-link custom-dark"
+                       href="@Url.Action("Index", new { page = ViewBag.CurrentPage - 1 })"
+                       aria-label="Previous">
+                        &laquo;
+                    </a>
+                </li>
+
+                <li class="page-item">
+                    <a class="page-link custom-dark"
+                       href="@Url.Action("Index", new { page = ViewBag.CurrentPage })">
+                        @ViewBag.CurrentPage
+                    </a>
+                </li>
+
+                <li class="page-item @(ViewBag.CurrentPage == ViewBag.TotalPages ? "disabled" : "")">
+                    <a class="page-link custom-dark"
+                       href="@Url.Action("Index", new { page = ViewBag.CurrentPage + 1 })"
+                       aria-label="Next">
+                        &raquo;
+                    </a>
+                </li>
+
+            </ul>
+        </nav>
+    }
 </div>
-@if (ViewBag.TotalPages > 1)
-{
-    <nav aria-label="TodoList pagination" class="mt-4">
-        <ul class="pagination justify-content-center">
-
-            <li class="page-item @(ViewBag.CurrentPage == 1 ? "disabled" : "")">
-                <a class="page-link custom-dark"
-                   href="@Url.Action("Index", new { page = ViewBag.CurrentPage - 1 })">
-                    &laquo;
-                </a>
-            </li>
-
-            <li class="page-item shadow-sm">
-                <a class="page-link custom-dark"
-                   href="@Url.Action("Index", new { page = ViewBag.CurrentPage })">
-                    @ViewBag.CurrentPage
-                </a>
-            </li>
-
-            <li class="page-item @(ViewBag.CurrentPage == ViewBag.TotalPages ? "disabled" : "")">
-                <a class="page-link custom-dark"
-                   href="@Url.Action("Index", new { page = ViewBag.CurrentPage + 1 })">
-                    &raquo;
-                </a>
-            </li>
-
-        </ul>
-    </nav>
-}

@@ -1,74 +1,184 @@
+@using TodoListApp.Services.Enums
+@using TodoListApp.WebApi.Models.Enums
+@using System.Security.Claims
 @model TodoListApp.WebApi.Models.Models.TodoTask.ModelTodoTask
+
 @{
     ViewData["Title"] = "Task Details";
+    var role = (TodoListRole)ViewBag.Role;
+    var status = Model.Status.ToString();
+
+    string statusText = Model.Status switch
+    {
+        TodoTaskStatus.Completed => "Completed",
+        TodoTaskStatus.InProgress => "In Progress",
+        TodoTaskStatus.NotStarted => "Not Started",
+        _ => Model.Status.ToString()
+    };
+
+    string statusClass = Model.Status switch
+    {
+        TodoTaskStatus.Completed => "bg-success",
+        TodoTaskStatus.InProgress => "bg-warning text-dark",
+        TodoTaskStatus.NotStarted => "bg-secondary",
+        _ => "bg-info"
+    };
+    var currentUserId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
 }
 
-<div class="container mt-4">
-    <div class="card bg-dark text-light shadow-lg border-secondary border-2">
-        <div class="card-body">
-            <h2 class="card-title mb-4">Task Details</h2>
-            <hr class="border-secondary" />
+<div class="container-fluid px-4 py-4">
+    <div class="row justify-content-center g-4">
+        <div class="col-lg-7">
+            <div class="glass-card shadow-lg rounded-4 p-4 h-100">
 
-            <dl class="row">
-                <dt class="col-sm-3">Title</dt>
-                <dd class="col-sm-9">@Model.Title</dd>
+                <h3 class="font-outfit fw-bold mb-3">
+                    Task Details
+                </h3>
 
-                <dt class="col-sm-3">Description</dt>
-                <dd class="col-sm-9">@Model.Description</dd>
+                <hr class="border-secondary mb-4" />
 
-                <dt class="col-sm-3">Status</dt>
-                <dd class="col-sm-9">@Model.Status</dd>
+                <dl class="row">
 
-                <dt class="col-sm-3">Created</dt>
-                <dd class="col-sm-9">@Model.CreateDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</dd>
+                    <dt class="col-sm-4 text-secondary">Title</dt>
+                    <dd class="col-sm-8 fw-semibold">@Model.Title</dd>
 
-                <dt class="col-sm-3">Due Date</dt>
-                <dd class="col-sm-9">@Model.DueDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</dd>
-                <dd hidden class="col-sm-9">@Model.TodoListId</dd>
+                    <dt class="col-sm-4 text-secondary">Description</dt>
+                    <dd class="col-sm-8">
+                        @(string.IsNullOrWhiteSpace(Model.Description)
+                            ? "No description"
+                            : Model.Description)
+                    </dd>
 
-                <dt class="col-sm-3">Assigned User</dt>
-                <dd class="col-sm-9">@Model.UserName</dd>
-            </dl>
+                    <dt class="col-sm-4 text-secondary">Status</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge @statusClass px-3 py-2">
+                            @statusText
+                        </span>
+                    </dd>
 
-            <hr class="border-secondary" />
-            <h5 class="mt-4">Tags</h5>
-            @if (Model.Tags?.Any() == true)
-            {
-                <div class="d-flex flex-wrap gap-2">
-                    @foreach (var tag in Model.Tags)
-                    {
-                        <span class="badge bg-secondary fs-6 px-3 py-2">@tag.Name</span>
-                    }
-                </div>
-            }
-            else
-            {
-                <p class="text-light fst-italic">No tags assigned.</p>
-            }
+                    <dt class="col-sm-4 text-secondary">Created</dt>
+                    <dd class="col-sm-8">@Model.CreateDate.ToString("dd.MM.yyyy HH:mm")</dd>
 
-            <h5 class="mt-4">Comments</h5>
-            @if (Model.Comments?.Any() == true)
-            {
-                <div class="d-flex flex-wrap gap-2">
-                    @foreach (var comment in Model.Comments)
-                    {
-                        <span class="badge bg-dark border border-secondary text-light fs-6 px-3 py-2">@comment.Text</span>
-                    }
-                </div>
-            }
-            else
-            {
-                <p class="text-light fst-italic">No comments available.</p>
-            }
+                    <dt class="col-sm-4 text-secondary">Due Date</dt>
+                    <dd class="col-sm-8">@Model.DueDate.ToString("dd.MM.yyyy HH:mm")</dd>
 
-            <div class="mt-4">
-                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-warning me-2">
-                    <i class="bi bi-pencil"></i> Edit
-                </a>
-                <a asp-action="Index" class="btn btn-outline-light">
-                    Back to Task List
-                </a>
+
+                    <dt class="col-sm-4 text-secondary">Assigned To</dt>
+                    <dd class="col-sm-8">
+                        @if (!string.IsNullOrEmpty(Model.AssignedUserName))
+                        {
+                            @Model.AssignedUserName
+                            @if (Model.AssignedUserId == Model.ListOwnerId)
+                            {
+                                @if (currentUserId == Model.ListOwnerId)
+                                {
+                                    <span class="text-muted fst-italic">(Owner)</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted fst-italic">(List Owner)</span>
+                                }
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-muted fst-italic">Unassigned</span>
+                        }
+                    </dd>
+
+                </dl>
+
             </div>
         </div>
+
+        <div class="col-lg-5 d-flex flex-column gap-4">
+            <div class="glass-card shadow-lg rounded-4 p-4">
+
+                <h5 class="font-outfit fw-bold mb-3">
+                    <i class="bi bi-tags"></i> Tags
+                </h5>
+
+                @if (Model.Tags?.Any() == true)
+                {
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var tag in Model.Tags)
+                        {
+                            <span class="badge bg-secondary px-3 py-2">
+                                @tag.Name
+                            </span>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted fst-italic mb-0">No tags assigned</p>
+                }
+
+            </div>
+
+            <div class="glass-card shadow-lg rounded-4 p-4">
+
+                <h5 class="font-outfit fw-bold mb-3">
+                    <i class="bi bi-chat-dots"></i> Comments
+                </h5>
+
+                @if (Model.Comments?.Any() == true)
+                {
+                    <div class="d-flex flex-column gap-2">
+                        @foreach (var comment in Model.Comments)
+                        {
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+
+                                <div class="glass-card rounded px-3 py-2 w-100">
+                                    <small class="text-primary fw-semibold d-block mb-1">
+                                        <i class="bi bi-person-circle"></i> @(comment.UserName ?? "Unknown")
+                                    </small>
+                                    @comment.Text
+                                </div>
+
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted fst-italic mb-0">No comments available</p>
+                }
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="d-flex align-items-center mt-4 px-2">
+        <div class="flex-grow-1">
+            <a asp-action="Index"
+               class="btn btn-outline-secondary rounded-pill px-4">
+                Back
+            </a>
+        </div>
+
+        <div class="d-flex justify-content-center gap-2 flex-grow-1">
+
+            @if (role == TodoListRole.Owner || role == TodoListRole.Editor)
+            {
+                <a asp-action="Edit"
+                   asp-route-id="@Model.Id"
+                   class="btn btn-outline-warning rounded-pill px-4">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+            }
+            @if (role == TodoListRole.Owner)
+            {
+                <a asp-action="DeleteConfirm"
+                   asp-route-id="@Model.Id"
+                   class="btn btn-outline-danger rounded-pill px-4"
+                   onclick="return confirm('Go to delete confirmation page?');">
+                    <i class="bi bi-trash"></i> Delete
+                </a>
+            }
+        </div>
+        <div class="flex-grow-1"></div>
     </div>
 </div>

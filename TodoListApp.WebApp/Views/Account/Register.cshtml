@@ -3,40 +3,47 @@
     ViewData["Title"] = "Register";
 }
 
-<div class="container d-flex justify-content-center align-items-center">
-    <div class="card p-4 shadow-lg w-50">
-        <h2 class="card-title text-center mb-4">Register</h2>
+<div class="container d-flex justify-content-center align-items-center mt-5">
+    <div class="glass-card p-4 shadow-lg" style="max-width: 480px; width: 100%;">
+        <h2 class="card-title text-center mb-4 font-outfit fw-bold">Register</h2>
 
         <form asp-action="Register" method="post">
             <div class="mb-3">
-                Username
+                <label class="form-label">Username</label>
                 <input asp-for="Username" class="form-control" />
                 <span asp-validation-for="Username" class="text-danger d-block" style="min-height: 1.5em;"></span>
             </div>
             <div class="mb-3">
-                Email
+                <label class="form-label">Email</label>
                 <input asp-for="Email" class="form-control" />
                 <span asp-validation-for="Email" class="text-danger d-block" style="min-height: 1.5em;"></span>
             </div>
             <div class="mb-3">
-                Password
+                <label class="form-label">Password</label>
                 <input asp-for="Password" type="password" class="form-control" />
                 <span asp-validation-for="Password" class="text-danger d-block" style="min-height: 1.5em;"></span>
             </div>
             <div class="mb-3">
-                ConfirmPassword
+                <label class="form-label">Confirm Password</label>
                 <input asp-for="ConfirmPassword" type="password" class="form-control" />
                 <span asp-validation-for="ConfirmPassword" class="text-danger d-block" style="min-height: 1.5em;"></span>
             </div>
 
-            <div class="d-grid gap-2">
-                <button type="submit" class="btn btn-primary">Register</button>
+            <div style="min-height: 2.5em;">
+                <div asp-validation-summary="ModelOnly" class="text-danger fw-semibold text-center"></div>
+            </div>
+
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary rounded-pill px-5 auth-btn">
+                    Register
+                </button>
             </div>
 
             <div class="text-center mt-3">
                 Already have an account?
                 <a asp-action="Login"
-                   asp-controller="Account">
+                   asp-controller="Account"
+                   class="link-info">
                     Login
                 </a>
             </div>

@@ -3,34 +3,42 @@
     ViewData["Title"] = "Login";
 }
 
-<div class="container d-flex justify-content-center align-items-center">
-    <div class="card p-4 shadow-lg w-50">
-        <h2 class="card-title text-center mb-4">Login</h2>
+<div class="container d-flex justify-content-center align-items-center mt-5">
+    <div class="glass-card p-4 shadow-lg" style="max-width: 480px; width: 100%;">
+        <h2 class="card-title text-center mb-4 font-outfit fw-bold">Login</h2>
 
         <form asp-action="Login" method="post">
             <div class="mb-3">
-                Email
+                <label class="form-label">Email</label>
                 <input asp-for="Email" class="form-control" />
                 <span asp-validation-for="Email" class="text-danger d-block" style="min-height: 1.5em;"></span>
             </div>
             <div class="mb-3">
-                Password
+                <label class="form-label">Password</label>
                 <input asp-for="Password" type="password" class="form-control" />
                 <span asp-validation-for="Password" class="text-danger d-block" style="min-height: 1.5em;"></span>
             </div>
-            <div class="form-check mb-3">
-                <input asp-for="RememberMe" class="form-check-input" />
-                RememberMe
+
+            <div style="min-height: 2.5em;">
+                <div asp-validation-summary="ModelOnly" class="text-danger fw-semibold"></div>
             </div>
 
-            <div class="d-grid gap-2">
-                <button type="submit" class="btn btn-primary">Login</button>
+            <div class="form-check mb-3">
+                <input asp-for="RememberMe" class="form-check-input" />
+                <label asp-for="RememberMe" class="form-check-label">Remember Me</label>
+            </div>
+
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary rounded-pill px-5 auth-btn">
+                    Login
+                </button>
             </div>
 
             <div class="text-center mt-3">
                 Don't have an account?
                 <a asp-action="Register"
-                   asp-controller="Account">
+                   asp-controller="Account"
+                   class="link-info">
                     Register
                 </a>
             </div>
@@ -38,7 +46,8 @@
 
         <div class="text-center mt-3">
             <a asp-action="ForgotPassword"
-               asp-controller="Account">
+               asp-controller="Account"
+               class="link-secondary">
                 Forgot your password?
             </a>
         </div>

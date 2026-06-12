@@ -1,0 +1,109 @@
+@using TodoListApp.WebApi.Models.Enums
+@model IEnumerable<TodoListApp.WebApi.Models.Models.Invitation.ModelInvitation>
+
+@{
+    ViewData["Title"] = "Invitations";
+}
+
+<div class="page-shell mt-4">
+
+    <h2 class="font-outfit fw-bold mb-3">Invitations</h2>
+
+    @if (!Model.Any())
+    {
+        <div class="d-flex justify-content-center mt-5">
+            <div class="glass-card text-center p-4 rounded-4"
+                 style="max-width: 420px; width: 100%;">
+                <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                <div class="text-secondary">
+                    No invitations found
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="d-flex flex-column gap-3">
+            @foreach (var item in Model)
+            {
+                bool isPending = item.Status == InvitationStatus.Pending;
+
+                <div class="glass-card p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center
+                            border-start border-4 @(isPending ? "border-warning" : "border-secondary")">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+
+                            <h5 class="mb-0 fw-bold">
+                                @item.TodoListTitle
+                            </h5>
+
+                            @if (isPending)
+                            {
+                                <span class="badge bg-warning text-dark">
+                                    Pending
+                                </span>
+                            }
+                            else if (item.Status == InvitationStatus.Accepted)
+                            {
+                                <span class="badge bg-success">
+                                    Accepted
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">
+                                    Rejected
+                                </span>
+                            }
+
+                        </div>
+
+                        <div class="text-secondary small mb-1">
+                            From: <b>@item.SenderUserName</b>
+                        </div>
+
+                        <div class="text-muted mb-1">
+                            Role: @item.Role
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(item.Message))
+                        {
+                            <div class="text-secondary small fst-italic">
+                                "@item.Message"
+                            </div>
+                        }
+                    </div>
+
+                    <div class="d-flex gap-2 mt-3 mt-md-0">
+                        @if (isPending)
+                        {
+                            <form asp-action="Accept" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.Id" />
+
+                                <button class="btn btn-success btn-sm rounded-pill px-3">
+                                    <i class="bi bi-check"></i>
+                                </button>
+                            </form>
+
+                            <form asp-action="Reject" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.Id" />
+
+                                <button class="btn btn-outline-danger btn-sm rounded-pill px-3">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            <span class="text-muted small fst-italic align-self-center">
+                                Completed
+                            </span>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
