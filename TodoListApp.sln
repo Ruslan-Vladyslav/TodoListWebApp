@@ -5,12 +5,7 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{AFA07ADD-2631-4E37-957A-F59C58E32F2B}"
 	ProjectSection(SolutionItems) = preProject
-		delivery-plan.md = delivery-plan.md
-		project-evaluation.md = project-evaluation.md
 		README.md = README.md
-		software-architecture.md = software-architecture.md
-		solution-requirements.md = solution-requirements.md
-		user-stories.md = user-stories.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TodoListApp.Services", "TodoListApp.Services\TodoListApp.Services.csproj", "{7B5F2E18-2F96-4C69-888F-755DE31146D3}"
