@@ -8,17 +8,12 @@ html {
   }
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
 html, body {
     height: 100%;
     margin: 0;
 }
 
 body {
-    background-color: var(--backgroung-color);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -34,36 +29,282 @@ main {
     margin-top: 40px;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+.validation-message {
+    min-height: 1.5rem;
+    display: block;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+.validation-message:empty::before {
+    content: "\00a0";
+}
+
+
+/* Glassmorphism Styles */
+.glass-navbar {
+    background: rgba(15, 17, 21, 0.7) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.03) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.glass-card:hover {
+    transform: none;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 34px rgba(0, 0, 0, 0.32) !important;
+}
+
+/* Inputs and Forms */
+.form-control, .form-select {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+    color-scheme: dark;
+}
+
+.form-select option {
+    background-color: #1a1d24 !important;
+    color: #fff !important;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #6ea8fe !important;
+    box-shadow: 0 0 0 0.15rem rgba(110,168,254,.15), 0 0 15px rgba(110,168,254,.15) !important;
+}
+
+.form-floating > label {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+
+/*Todo list page*/
+.list-card {
+    min-height: 220px;
+    border-radius: 18px;
+    transition: all 0.2s ease-in-out;
+}
+
+    .list-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 24px rgba(0,0,0,.25);
+    }
+
+.todo-card {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.todo-grid {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.tooltip-inner {
+    background: rgba(20, 22, 28, 0.95);
+    color: #fff;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.08);
+    padding: 8px 12px;
+    font-size: .85rem;
+    backdrop-filter: blur(12px);
+}
+
+.tooltip .tooltip-arrow::before {
+    border-top-color: rgba(20,22,28,.95) !important;
+}
+
+.page-shell {
+    max-width: 700px;
+    margin: 0 auto;
 }
 
 
 
-/*Current page highlight*/
-.active {
-    color: #0d6efd !important;
+/* task table */
+.table-glass thead th {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
     font-weight: 600;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.table-glass td,
+.table-glass th {
+    vertical-align: middle;
+}
+
+.text-ellipsis {
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.btn-group .btn {
+    margin-right: 4px;
+    border-radius: 8px !important;
+}
+
+.btn-group .btn:last-child {
+    margin-right: 0;
+}
+
+.tag-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 13px;
+}
+
+.tag-delete-btn {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(220, 53, 69, 0.15);
+    color: #dc3545;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.tag-delete-btn:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.table-fixed {
+    table-layout: fixed;
+    width: 100%;
 }
 
 
 
-/*Partial*/
-.page-item.disabled .page-link {
-    background-color: #2f3337;
-    color: #e0e0e0 !important;
-    opacity: 0.85;
-    cursor: not-allowed;
+/*Task page*/
+.task-card {
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.hover-lift {
+    transition: all 0.2s ease-in-out;
+}
+
+.hover-lift:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
 }
 
 
+/* Custom Buttons */
+.btn {
+    transition: all 0.2s ease-in-out;
+}
 
-/*TodoList command Task pages*/
+.btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #4c6ef5 100%) !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #0b5ed7 0%, #3b5bdb 100%) !important;
+    transform: none !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15) !important;
+}
+
+.btn-primary:active {
+    filter: brightness(0.95);
+}
+
+.btn-outline-primary {
+    border-color: #6ea8fe !important;
+    color: #6ea8fe !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: rgba(110, 168, 254, 0.1) !important;
+    color: #fff !important;
+}
+
+.auth-btn {
+    transition: all 0.2s ease;
+    transform: translateY(0);
+}
+
+.auth-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+    filter: brightness(1.08);
+}
+
+.app-btn {
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    padding: 6px 14px;
+}
+
+.app-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    filter: brightness(1.05);
+}
+
+.app-btn:active {
+    transform: translateY(0px);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+}
+
+.btn-group-custom {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.action-btn {
+    transition: all 0.15s ease;
+}
+
+.action-btn:hover {
+    transform: translateY(-1px);
+    opacity: 0.9;
+}
+
+.page-item.shadow-sm .page-link.custom-dark {
+    font-weight: 600;
+    border-color: rgba(255,255,255,0.15) !important;
+    background: rgba(255,255,255,0.08) !important;
+    box-shadow: none !important;
+}
+
+/* Navbar active state */
+.nav-link.active {
+    color: #6ea8fe !important;
+    font-weight: 600;
+    text-shadow: 0 0 10px rgba(110, 168, 254, 0.3);
+}
+
+/* Helpers */
 .text-clamp-1 {
     display: -webkit-box;
     -webkit-line-clamp: 1;
@@ -88,48 +329,49 @@ main {
     text-overflow: ellipsis;
 }
 
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--background-color);
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.scroll-box {
+    max-height: 160px;
+    overflow-y: auto;
+}
+
+/* Notifications Page List Group */
+.list-group-item {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: rgba(255, 255, 255, 0.05) !important;
+    color: #fff !important;
+    transition: all 0.15s ease-in-out;
+}
+
+.list-group-item:hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+    transform: translateX(4px);
+}
+
+.list-group-item-warning {
+    border-left: 4px solid #ffc107 !important;
+    background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
+/* DateTime Picker */
 input[type="datetime-local"] {
     color-scheme: dark;
 }
-
 input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     filter: invert(1);
     cursor: pointer;
-}
-
-
-/*Scrollbar*/
-/* Chrome, Edge, Safari */
-::-webkit-scrollbar {
-    width: 10px;
-}
-
-::-webkit-scrollbar-track {
-    background: #1e1e1e;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #555;
-    border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #777;
-}
-
-
-/*Account*/
-.fixed-btn {
-    min-width: 130px;
-    border-radius: 10px;
-    font-weight: 500;
-}
-
-.btn-secondary {
-    background-color: #3a3f44;
-    border: none;
-}
-
-.btn-secondary:hover {
-    background-color: #4a4f55;
 }
