@@ -1,145 +1,328 @@
+@using TodoListApp.WebApi.Models.Enums
 @model TodoListApp.WebApi.Models.Models.TodoTask.UpdateTodoTask
 
 @{
     ViewData["Title"] = "Edit Task";
+    var role = (TodoListRole)ViewBag.Role;
 }
 
-<h1 class="text-dark text-center mb-4">Edit Task</h1>
+<h1 class="font-outfit fw-bold text-center mb-4">
+    Edit Task
+</h1>
 
-<div class="row justify-content-center">
-    <div class="col-md-7 bg-dark p-4 rounded shadow">
-        <form asp-action="Edit" method="post" class="text-light">
-            @Html.AntiForgeryToken()
-            <input type="hidden" asp-for="Id" />
-            <input type="hidden" asp-for="UserId" />
+<div class="container-fluid">
 
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+    <div class="row g-4">
+        <div class="col-lg-7">
 
-            <div class="form-group mb-3">
-                <label asp-for="Title" class="form-label text-light fw-bold"></label>
-                <input asp-for="Title" class="form-control bg-secondary text-light border-0" />
-                <span asp-validation-for="Title" class="text-danger"></span>
-            </div>
+            <div class="glass-card p-4 rounded-4 shadow">
 
-            <div class="form-group mb-3">
-                <label asp-for="Description" class="form-label text-light fw-bold"></label>
-                <textarea asp-for="Description"
-                          class="form-control bg-secondary text-light border-0"
-                          style="height: 120px; resize: vertical; overflow-y: auto;">
-                </textarea>
-                <span asp-validation-for="Description" class="text-danger"></span>
-            </div>
+                <form asp-action="Edit" method="post">
 
-            <div class="form-group mb-3">
-                <label asp-for="DueDate" class="form-label text-light fw-bold">
-                    Due Date
-                </label>
+                    @Html.AntiForgeryToken()
 
-                <input asp-for="DueDate"
-                       type="datetime-local"
-                       class="form-control bg-secondary text-light border-0" />
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" asp-for="UserId" />
 
-                <span asp-validation-for="DueDate" class="text-danger"></span>
-            </div>
+                    <div asp-validation-summary="ModelOnly"
+                         class="text-danger mb-3">
+                    </div>
 
-            <div class="form-group mb-3">
-                <label asp-for="TodoListId" class="form-label text-light fw-bold">List</label>
-                <select asp-for="TodoListId" class="form-select bg-secondary text-light border-0" asp-items="@ViewBag.ToDoLists"></select>
-                <span asp-validation-for="TodoListId" class="text-danger"></span>
-            </div>
+                    <div class="mb-3">
+                        <label asp-for="Title"
+                               class="form-label fw-bold"></label>
 
-            <div class="form-group mb-3">
-                <label class="form-label text-light fw-bold">User</label>
+                        <input asp-for="Title"
+                               class="form-control" />
 
-                <input value="@Model.UserName"
-                       class="form-control bg-secondary text-light border-0"
-                       readonly />
-            </div>
-
-            <div class="form-group mb-4">
-                <label class="form-label text-light fw-bold">Status</label>
-                <select asp-for="Status" class="form-select bg-secondary text-light border-0" asp-items="@ViewBag.Statuses"></select>
-            </div>
-
-            <div class="d-flex justify-content-between">
-                <a asp-action="Index" class="btn btn-secondary">Back to List</a>
-                <input type="submit" value="Save Task" class="btn btn-primary" />
-            </div>
-        </form>
-
-        <hr class="bg-light my-4" />
-
-        <h4 class="text-light mb-2">Tags</h4>
-        <div class="mb-3">
-            @if (Model.Tags?.Any() == true)
-            {
-                foreach (var tag in Model.Tags)
-                {
-                    <form asp-action="RemoveTagFromTask" method="post" class="d-inline">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="taskId" value="@Model.Id" />
-                        <input type="hidden" name="tagId" value="@tag.Id" />
-                        <span class="badge bg-secondary p-2 me-2">
-                            @tag.Name
-                            <button type="submit" class="btn btn-sm btn-danger p-0 ms-1" title="Remove Tag">&times;</button>
+                        <span asp-validation-for="Title"
+                              class="text-danger validation-message">
                         </span>
-                    </form>
-                }
-            }
-            else
-            {
-                <p class="text-light">No tags assigned.</p>
-            }
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description"
+                               class="form-label fw-bold"></label>
+
+                        <textarea asp-for="Description"
+                                  class="form-control"
+                                  rows="5"></textarea>
+
+                        <span asp-validation-for="Description"
+                              class="text-danger validation-message">
+                        </span>
+                    </div>
+
+                    <input asp-for="DueDate"
+                           class="dueDateHidden"
+                           type="hidden" />
+
+                    @await Html.PartialAsync("_DateTimePicker", Model.DueDate)
+
+                    <div class="mb-3">
+
+                        <label asp-for="TodoListId"
+                               class="form-label fw-bold">
+                            List
+                        </label>
+
+                        @if (role == TodoListRole.Owner)
+                        {
+                            <select asp-for="TodoListId"
+                                    asp-items="@ViewBag.ToDoLists"
+                                    class="form-select">
+                            </select>
+                        }
+                        else
+                        {
+                            <input type="hidden"
+                                   asp-for="TodoListId" />
+
+                            <input class="form-control"
+                                   readonly
+                                   value="@(((SelectList)ViewBag.ToDoLists).FirstOrDefault(x => x.Value == Model.TodoListId.ToString())?.Text)" />
+                        }
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-label fw-bold">
+                            User
+                        </label>
+
+                        <input class="form-control"
+                               readonly
+                               value="@Model.UserName" />
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-label fw-bold">
+                            Assigned To
+                        </label>
+
+                        @if (role == TodoListRole.Owner)
+                        {
+                            <select asp-for="AssignedUserId"
+                                    asp-items="@ViewBag.Users"
+                                    class="form-select">
+
+                                <option value="">
+                                    Not assigned
+                                </option>
+
+                            </select>
+
+                            <span asp-validation-for="AssignedUserId"
+                                  class="text-danger validation-message">
+                            </span>
+                        }
+                        else
+                        {
+                            <input type="hidden" asp-for="AssignedUserId" />
+                            <input class="form-control"
+                                   readonly
+                                   value="@Model.AssignedUserName" />
+                        }
+
+                    </div>
+
+                    <div class="mb-4">
+
+                        <label class="form-label fw-bold">
+                            Status
+                        </label>
+
+                        @if (role == TodoListRole.Viewer)
+                        {
+                            <input class="form-control"
+                                   readonly
+                                   value="@Model.Status" />
+                        }
+                        else
+                        {
+                            <select asp-for="Status"
+                                    asp-items="@ViewBag.Statuses"
+                                    class="form-select">
+                            </select>
+                        }
+
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+
+                        <a asp-action="Index"
+                           class="btn btn-outline-secondary rounded-pill px-4">
+                            Back
+                        </a>
+
+                        <button type="submit"
+                                class="btn btn-primary rounded-pill px-4">
+                            Save Task
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
         </div>
 
-        <form asp-action="AddTagToTask" method="post" class="mb-3">
-            <input type="hidden" name="taskId" value="@Model.Id" />
-            <div class="input-group">
-                <select name="tagId" class="form-select bg-secondary text-light border-0" asp-items="@ViewBag.Tags"></select>
-                <button type="submit" class="btn btn-primary">Add existing</button>
-            </div>
-        </form>
+        <div class="col-lg-5">
+            <div class="glass-card p-4 rounded-4 shadow mb-4">
 
-        <form asp-action="CreateAndAddTag" method="post" class="mb-3">
-            <input type="hidden" name="taskId" value="@Model.Id" />
-            <div class="input-group">
-                <input type="text" name="newTagName" class="form-control bg-secondary text-light border-0" placeholder="New tag name" />
-                <button type="submit" class="btn btn-primary">Add New</button>
-            </div>
-        </form>
+                <h4 class="font-outfit fw-bold mb-3">
+                    <i class="bi bi-tags"></i> Tags
+                </h4>
 
-        <hr class="bg-light my-4" />
-
-        <h4 class="text-light mb-2">Comments</h4>
-        <div class="mb-3">
-            @if (Model.Comments?.Any() == true)
-            {
-                foreach (var comment in Model.Comments)
+                @if (Model.Tags?.Any() == true)
                 {
-                    <form asp-action="DeleteCommentFromTask" method="post" class="d-inline">
-                        <input type="hidden" name="taskId" value="@Model.Id" />
-                        <input type="hidden" name="commentId" value="@comment.Id" />
-                        <span class="badge bg-secondary p-2 me-2">
-                            @comment.Text
-                            <button type="submit" class="btn btn-sm btn-danger p-0 ms-1" style="line-height: 1.2;">&times;</button>
-                        </span>
-                    </form>
+                    <div class="d-flex flex-wrap gap-2 mb-4">
+
+                        @foreach (var tag in Model.Tags)
+                        {
+                            <form asp-action="RemoveTagFromTask" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+
+                                <input type="hidden" name="taskId" value="@Model.Id" />
+                                <input type="hidden" name="tagId" value="@tag.Id" />
+
+                                <span class="badge bg-secondary tag-badge">
+                                    @tag.Name
+                                    <button type="submit"
+                                            class="tag-delete-btn"
+                                            title="Remove tag">
+                                        ×
+                                    </button>
+                                </span>
+                            </form>
+                        }
+
+                    </div>
                 }
-            }
-            else
-            {
-                <p class="text-light">No comments yet.</p>
-            }
+                else
+                {
+                    <p class="text-muted fst-italic mb-4">No tags assigned.</p>
+                }
+
+                <form asp-action="AddTagToTask" method="post" class="mb-4">
+
+                    <input type="hidden" name="taskId" value="@Model.Id" />
+
+                    <label class="form-label fw-bold mb-2">Add existing tag</label>
+
+                    <div class="input-group">
+                        <select name="tagId"
+                                class="form-select"
+                                asp-items="@ViewBag.Tags"></select>
+
+                        <button type="submit" class="btn btn-primary px-3">
+                            Add
+                        </button>
+                    </div>
+                </form>
+
+                <form asp-action="CreateAndAddTag" method="post">
+
+                    <input type="hidden" name="taskId" value="@Model.Id" />
+
+                    <label class="form-label fw-bold mb-2">Create new tag</label>
+
+                    <div class="input-group">
+                        <input type="text"
+                               name="newTagName"
+                               class="form-control"
+                               placeholder="New tag name" />
+
+                        <button type="submit" class="btn btn-success px-3">
+                            Create
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+
+            <div class="glass-card p-4 rounded-4 shadow">
+
+                <h4 class="font-outfit fw-bold mb-3">
+                    <i class="bi bi-chat-dots"></i>
+                    Comments
+                </h4>
+
+                @if (Model.Comments?.Any() == true)
+                {
+                    <div class="d-flex flex-column gap-2">
+                        @foreach (var comment in Model.Comments)
+                        {
+                            <form asp-action="DeleteCommentFromTask" method="post" class="w-100">
+                                <input type="hidden" name="taskId" value="@Model.Id" />
+                                <input type="hidden" name="commentId" value="@comment.Id" />
+                                
+                                <div class="glass-card rounded px-3 py-2 w-100 position-relative">
+                                    <small class="text-primary fw-semibold d-block mb-1">
+                                        <i class="bi bi-person-circle"></i> @(comment.UserName ?? "Unknown")
+                                    </small>
+                                    <div class="pe-4">@comment.Text</div>
+                                    
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2"
+                                            style="padding: 0.1rem 0.4rem;"
+                                            title="Delete comment">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted fst-italic">No comments yet.</p>
+                }
+
+                <hr class="border-secondary my-3" />
+
+                <form asp-action="AddCommentToTask"
+                      method="post"
+                      id="commentForm">
+
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden"
+                           name="taskId"
+                           value="@Model.Id" />
+
+                    <textarea id="commentContent"
+                              name="commentContent"
+                              class="form-control mb-2"
+                              placeholder="Add comment...">
+                    </textarea>
+
+                    <span id="commentError"
+                          class="text-danger">
+                    </span>
+
+                    <button type="submit"
+                            class="btn btn-primary rounded-pill px-4 mt-2">
+                        Add Comment
+                    </button>
+
+                </form>
+            </div>
+
         </div>
 
-        <form asp-action="AddCommentToTask" method="post" class="mb-3">
-            <input type="hidden" name="taskId" value="@Model.Id" />
-            <textarea name="commentContent" class="form-control bg-secondary text-light border-0 mb-2" placeholder="Add a comment..."></textarea>
-            <button type="submit" class="btn btn-primary">Add Comment</button>
-        </form>
     </div>
+
 </div>
 
-@section Scripts {
+@section Scripts
+{
     @await Html.PartialAsync("_ValidationScriptsPartial")
+
+    <script src="~/js/task-edit.js"></script>
 }

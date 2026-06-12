@@ -20,7 +20,7 @@ public class UpdateTodoTask
     [Required]
     [DataType(DataType.DateTime)]
     [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
-    public DateTime DueDate { get; set; }
+    public DateTime DueDate { get; set; } = DateTime.Now;
 
     public TodoTaskStatus Status { get; set; }
 

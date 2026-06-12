@@ -1,0 +1,68 @@
+@model DateTime?
+
+@{
+    var value = Model ?? DateTime.Now;
+    var selectedHour = value.Hour == 0 ? 24 : value.Hour;
+}
+
+<div class="row date-time-picker">
+    <div class="col-md-6 mb-2">
+        <label class="form-label">
+            Date
+        </label>
+
+        <input class="datePart form-control"
+               type="date"
+               value="@value.ToString("yyyy-MM-dd")" />
+    </div>
+
+    <div class="col-md-3 mb-2">
+        <label class="form-label">
+            Hour
+        </label>
+
+        <select class="hourPart form-select">
+            @for (int i = 1; i <= 24; i++)
+            {
+                if (selectedHour == i)
+                {
+                    <option value="@i.ToString("D2")"
+                            selected>
+                        @i.ToString("D2")
+                    </option>
+                }
+                else
+                {
+                    <option value="@i.ToString("D2")">
+                        @i.ToString("D2")
+                    </option>
+                }
+            }
+        </select>
+    </div>
+
+    <div class="col-md-3 mb-2">
+        <label class="form-label">
+            Minute
+        </label>
+
+        <select class="minutePart form-select">
+            @for (int i = 0; i < 60; i += 5)
+            {
+                if (value.Minute == i)
+                {
+                    <option value="@i.ToString("D2")"
+                            selected>
+                        @i.ToString("D2")
+                    </option>
+                }
+                else
+                {
+                    <option value="@i.ToString("D2")">
+                        @i.ToString("D2")
+                    </option>
+                }
+            }
+        </select>
+    </div>
+</div>

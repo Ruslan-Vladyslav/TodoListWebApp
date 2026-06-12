@@ -1,0 +1,25 @@
+@model TodoListApp.WebApp.ViewComponents.NavbarIndicatorsViewModel
+
+<div class="d-flex align-items-center">
+    <a asp-controller="Notification" asp-action="Index" class="nav-link me-3 position-relative d-flex align-items-center" title="Notifications">
+        <i class="bi bi-bell fs-5"></i>
+        @if (Model.UnreadNotifications > 0)
+        {
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem; padding: 0.35em 0.5em;">
+                @Model.UnreadNotifications
+                <span class="visually-hidden">unread notifications</span>
+            </span>
+        }
+    </a>
+
+    <a asp-controller="Invitation" asp-action="Index" class="nav-link me-3 position-relative d-flex align-items-center" title="Invitations">
+        <i class="bi bi-envelope fs-5"></i>
+        @if (Model.PendingInvitations > 0)
+        {
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark" style="font-size: 0.65rem; padding: 0.35em 0.5em;">
+                @Model.PendingInvitations
+                <span class="visually-hidden">pending invitations</span>
+            </span>
+        }
+    </a>
+</div>

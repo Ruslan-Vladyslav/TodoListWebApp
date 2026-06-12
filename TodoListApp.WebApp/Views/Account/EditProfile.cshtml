@@ -7,35 +7,35 @@
 <div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-md-6">
-            <h3 class="mb-3 text-start text-dark">
+            <h3 class="mb-3 text-start font-outfit fw-bold">
                 Edit Profile
             </h3>
 
-            <div class="bg-dark text-light p-4 rounded-3 shadow">
+            <div class="glass-card p-4 rounded-3 shadow">
                 <form asp-action="EditProfile" method="post">
                     <div class="mb-3">
                         <label class="form-label">Username</label>
                         <input asp-for="Username"
-                               class="form-control bg-secondary text-light border-0" />
+                               class="form-control" />
                         <span asp-validation-for="Username" class="text-danger d-block" style="min-height: 1.5em;"></span>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Email</label>
                         <input asp-for="Email"
-                               class="form-control bg-secondary text-light border-0"
+                               class="form-control"
                                readonly />
                     </div>
 
                     <div class="d-flex justify-content-between mt-4">
 
                         <a asp-action="Profile"
-                           class="btn btn-outline-secondary fixed-btn">
+                           class="btn btn-outline-secondary app-btn">
                             Cancel
                         </a>
 
                         <button type="submit"
-                                class="btn btn-primary fixed-btn">
+                                class="btn btn-primary app-btn">
                             Save
                         </button>
                     </div>

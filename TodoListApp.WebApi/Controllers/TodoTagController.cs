@@ -1,9 +1,12 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.WebApi.Models.Models.TodoTag;
 
 namespace TodoListApp.WebApi.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("[controller]")]
 public class TodoTagController : ControllerBase
@@ -16,45 +19,68 @@ public class TodoTagController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllTags(int page = 1, int pageSize = 10)
+    public async Task<IActionResult> GetAllTags(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
     {
         var tags = await this._service.GetAllTagsAsync(page, pageSize);
-        return this.Ok(tags);
+        return Ok(tags);
     }
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetTagById(int id)
     {
         var tag = await this._service.GetByIdTagAsync(id);
-        return this.Ok(tag);
+
+        if (tag == null)
+        {
+            return NotFound($"Tag with id {id} not found");
+        }
+
+        return Ok(tag);
     }
-    [HttpPost("{tagId}/addTask/{taskId}")]
-    public async Task<IActionResult> AddTagToTask(int tagId, int taskId)
+
+    [HttpPost("tasks/{taskId:int}/tags/{tagId:int}")]
+    public async Task<IActionResult> AddTagToTask(int taskId, int tagId)
     {
-        await this._service.AddTagToTaskAsync(taskId, tagId);
-        return this.Ok();
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        await this._service.AddTagToTaskAsync(taskId, tagId, userId!);
+        return NoContent();
     }
 
 
-    [HttpDelete("{tagId}/removeTask/{taskId}")]
+    [HttpDelete("tasks/{taskId:int}/tags/{tagId:int}")]
     public async Task<IActionResult> DeleteTagFromTask(int taskId, int tagId)
     {
-        await this._service.DeleteTagFromTaskAsync(taskId, tagId);
-        return this.NoContent();
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        await this._service.DeleteTagFromTaskAsync(taskId, tagId, userId!);
+        return NoContent();
     }
 
     [HttpGet("{tagId:int}/tasks")]
     public async Task<IActionResult> GetTasksByTag(int tagId)
     {
-        var tasks = await this._service.GetTasksByTagAsync(tagId);
-        return this.Ok(tasks);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        var tasks = await _service.GetTasksByTagAsync(tagId, userId!);
+        return Ok(tasks);
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateTag([FromBody] ModelTodoTag newTag)
+    public async Task<IActionResult> CreateTag([FromBody] CreateTagRequest request)
     {
-        var createdTag = await this._service.CreateTagAsync(newTag?.Name!);
-        return this.Ok(createdTag);
-    }
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
 
+        var created = await this._service.CreateTagAsync(request.Name);
+
+        return this.CreatedAtAction(
+            nameof(GetTagById),
+            new { id = created.Id },
+            created);
+    }
 }

@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TodoListApp.Services.Enums;
 using TodoListApp.Services.Interfaces;
@@ -5,6 +7,7 @@ using TodoListApp.WebApi.Models.Models.TodoTask;
 
 namespace TodoListApp.WebApi.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("[controller]")]
 public class TodoTaskController : ControllerBase
@@ -16,118 +19,164 @@ public class TodoTaskController : ControllerBase
         this._service = service;
     }
 
-    [HttpGet("by-list/{listId}")]
+    [HttpGet("by-list/{listId:int}")]
     public async Task<IActionResult> GetByListId(int listId)
     {
-        var tasks = await this._service.GetByListIdAsync(listId);
-        return this.Ok(tasks);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var tasks = await this._service.GetByListIdAsync(listId, userId!);
+        return Ok(tasks);
     }
 
     [HttpPost]
     public async Task<IActionResult> CreateTask([FromBody] CreateTodoTask model)
     {
-        if (!this.ModelState.IsValid)
+        if (!ModelState.IsValid)
         {
-            return this.BadRequest(this.ModelState);
+            return BadRequest(ModelState);
         }
 
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        model.UserId = userId!;
+
         var created = await this._service.CreateTaskAsync(model);
-        return this.Ok(created);
+
+        return this.CreatedAtAction(
+            nameof(GetTaskById),
+            new { id = created.Id },
+            created);
     }
 
     [HttpPut("{id:int}")]
     public async Task<IActionResult> UpdateTask(int id, [FromBody] UpdateTodoTask model)
     {
-        if (!this.ModelState.IsValid)
+        if (!ModelState.IsValid)
         {
-            return this.BadRequest(this.ModelState);
+            return BadRequest(ModelState);
         }
 
-        await this._service.UpdateTaskAsync(id, model);
-        return this.Ok();
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var existing = await this._service.GetByIdTaskAsync(id, userId!);
+
+        if (existing == null)
+        {
+            return NotFound($"Task with id {id} not found");
+        }
+
+        await this._service.UpdateTaskAsync(id, model, userId!);
+
+        return NoContent();
     }
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetTaskById(int id)
     {
-        var task = await this._service.GetByIdTaskAsync(id);
-        return this.Ok(task);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var task = await this._service.GetByIdTaskAsync(id, userId!);
+
+        if (task == null)
+        {
+            return NotFound($"Task with id {id} not found");
+        }
+
+        return Ok(task);
     }
 
     [HttpGet]
     public async Task<IActionResult> GetAllTasks(
-        int page = 1,
-        int pageSize = 10,
-        int? listId = null,
-        string? userId = null,
-        TodoTaskStatus? status = null,
-        string? sort = null)
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 8,
+        [FromQuery] int? listId = null,
+        [FromQuery] TodoTaskStatus? status = null,
+        [FromQuery] string? sort = null)
     {
-        var tasks = await this._service.GetAllTasksAsync(page, pageSize, listId, userId, status, sort);
-        return this.Ok(tasks);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var tasks = await this._service.GetAllTasksAsync(
+            page,
+            pageSize,
+            listId,
+            userId,
+            status,
+            sort);
+
+        return Ok(tasks);
     }
 
     [HttpGet("by-create")]
     public async Task<IActionResult> GetTasksByCreateDate(
-        int page = 1,
-        int pageSize = 10,
-        string? userId = null,
-        DateTime? date = null)
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] DateTime? date = null)
     {
         if (date == null)
         {
-            return this.BadRequest("Create date is required.");
+            return BadRequest("Create date is required.");
         }
 
-        var tasks = await this._service.GetAllTasksByCreateDateAsync(page, pageSize, userId, date.Value);
-        return this.Ok(tasks);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var tasks = await this._service.GetAllTasksByCreateDateAsync(
+            page,
+            pageSize,
+            userId,
+            date.Value);
+
+        return Ok(tasks);
     }
 
     [HttpGet("by-due")]
     public async Task<IActionResult> GetTasksByDueDate(
-        int page = 1,
-        int pageSize = 10,
-        string? userId = null,
-        DateTime? date = null)
+       [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] DateTime? date = null)
     {
         if (date == null)
         {
-            return this.BadRequest("Due date is required.");
+            return BadRequest("Due date is required.");
         }
 
-        var tasks = await this._service.GetAllTasksByDueDateAsync(page, pageSize, userId, date.Value);
-        return this.Ok(tasks);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var tasks = await this._service.GetAllTasksByDueDateAsync(
+            page,
+            pageSize,
+            userId,
+            date.Value);
+
+        return Ok(tasks);
     }
 
     [HttpGet("by-title")]
     public async Task<IActionResult> GetTasksByTitle(
-        int page = 1,
-        int pageSize = 10,
-        string? userId = null,
-        string? title = null)
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? title = null)
     {
         if (string.IsNullOrWhiteSpace(title))
         {
-            return this.BadRequest("Title is required.");
+            return BadRequest("Title is required.");
         }
 
-        var tasks = await this._service.GetAllTasksByTitleAsync(page, pageSize, userId, title);
-        return this.Ok(tasks);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var tasks = await this._service.GetAllTasksByTitleAsync(
+            page,
+            pageSize,
+            userId,
+            title);
+
+        return Ok(tasks);
     }
 
     [HttpGet("by-date-range")]
     public async Task<IActionResult> GetTasksByDateRange(
-        int page = 1,
-        int pageSize = 10,
-        string? userId = null,
-        DateTime? fromDate = null,
-        DateTime? toDate = null)
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] DateTime? fromDate = null,
+        [FromQuery] DateTime? toDate = null)
     {
         if (fromDate == null || toDate == null)
         {
-            return this.BadRequest("Both dates are required.");
+            return BadRequest("Both dates are required.");
         }
 
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var tasks = await this._service.GetAllTasksByDateRangeAsync(
             page,
             pageSize,
@@ -135,13 +184,22 @@ public class TodoTaskController : ControllerBase
             fromDate.Value,
             toDate.Value);
 
-        return this.Ok(tasks);
+        return Ok(tasks);
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteTask(int id)
     {
-        await this._service.DeleteTaskAsync(id);
-        return this.Ok();
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var existing = await this._service.GetByIdTaskAsync(id, userId!);
+
+        if (existing == null)
+        {
+            return NotFound($"Task with id {id} not found");
+        }
+
+        await this._service.DeleteTaskAsync(id, userId!);
+
+        return NoContent();
     }
 }

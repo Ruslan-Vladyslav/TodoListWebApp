@@ -17,7 +17,7 @@ public class TodoListEntity
 
     public string? UserId { get; set; }
 
-    public IEnumerable<string> SharedUsers { get; } = new List<string>();
-
     public ICollection<TodoTaskEntity> TodoTasks { get; set; } = new List<TodoTaskEntity>();
+
+    public ICollection<TodoListAccessEntity> Accesses { get; set; } = new List<TodoListAccessEntity>();
 }

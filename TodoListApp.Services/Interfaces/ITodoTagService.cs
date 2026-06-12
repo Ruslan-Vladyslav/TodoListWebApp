@@ -1,3 +1,4 @@
+using TodoListApp.WebApi.Models.Models.Common;
 using TodoListApp.WebApi.Models.Models.TodoTag;
 using TodoListApp.WebApi.Models.Models.TodoTask;
 
@@ -7,13 +8,13 @@ public interface ITodoTagService
 {
     Task<ModelTodoTag> CreateTagAsync(string tagName);
 
-    Task<IEnumerable<ModelTodoTag>> GetAllTagsAsync(int page, int pageSize);
+    Task<PagedResponse<ModelTodoTag>> GetAllTagsAsync(int page, int pageSize);
 
     Task<ModelTodoTag?> GetByIdTagAsync(int id);
 
-    Task<IEnumerable<ModelTodoTask>> GetTasksByTagAsync(int tagId);
+    Task<IEnumerable<ModelTodoTask>> GetTasksByTagAsync(int tagId, string userId);
 
-    Task AddTagToTaskAsync(int taskId, int tagId);
+    Task AddTagToTaskAsync(int taskId, int tagId, string userId);
 
-    Task DeleteTagFromTaskAsync(int taskId, int tagId);
+    Task DeleteTagFromTaskAsync(int taskId, int tagId, string userId);
 }

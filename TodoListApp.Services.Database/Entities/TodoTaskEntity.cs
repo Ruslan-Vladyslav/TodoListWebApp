@@ -23,9 +23,13 @@ public class TodoTaskEntity
     [Required]
     public DateTime DueDate { get; set; }
 
-    public string? UserId { get; set; }
+    public string CreatedByUserId { get; set; } = null!;
 
-    public string? AssignedUserId { get; set; }
+    public string? AssignedToUserId { get; set; }
+
+    public string? AssignedByUserId { get; set; }
+
+    public DateTime? AssignedAt { get; set; }
 
     [Required]
     public TodoTaskStatus Status { get; set; } = TodoTaskStatus.NotStarted;
@@ -33,7 +37,7 @@ public class TodoTaskEntity
     [ForeignKey(nameof(TodoList))]
     public int TodoListId { get; set; }
 
-    public TodoListEntity? TodoList { get; set; }
+    public TodoListEntity? TodoList { get; set; } = null!;
 
     public ICollection<TodoTagEntity>? Tags { get; set; } = new List<TodoTagEntity>();
 

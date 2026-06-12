@@ -1,0 +1,47 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: todolist-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "TodoList_Docker_Password123!"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+
+  webapi:
+    build:
+      context: .
+      dockerfile: TodoListApp.WebApi/Dockerfile
+    container_name: todolist-webapi
+    depends_on:
+      - sqlserver
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__TodoListDb: "Server=sqlserver,1433;Database=TodoListDb;User Id=sa;Password=TodoList_Docker_Password123!;TrustServerCertificate=True;MultipleActiveResultSets=true"
+      Database__AutoMigrate: "true"
+      Jwt__Key: "TodoListApp_SuperSecret_Key_That_Should_Be_At_Least_256_Bits_Long"
+      Jwt__Issuer: "TodoListWebApi"
+      Jwt__Audience: "TodoListWebApp"
+      Jwt__ExpireDays: "7"
+    ports:
+      - "5080:8080"
+
+  webapp:
+    build:
+      context: .
+      dockerfile: TodoListApp.WebApp/Dockerfile
+    container_name: todolist-webapp
+    depends_on:
+      - webapi
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:8080"
+      WebApi__ApiUri: "http://webapi:8080/"
+    ports:
+      - "8081:8080"
+
+volumes:
+  sqlserver-data:

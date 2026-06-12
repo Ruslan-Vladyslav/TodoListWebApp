@@ -6,24 +6,24 @@
 
 <div class="container-fluid mt-4">
     <div class="row g-4">
-        <div class="col-md-4 col-lg-3 bg-dark text-light p-4 rounded-3 shadow-sm"
+        <div class="col-md-4 col-lg-3 glass-card p-4 rounded-3 shadow-sm mb-4"
              style="height: 20vh; overflow-y: auto;">
 
-            <h3 class="mb-4 text-center">Tags</h3>
+            <h3 class="mb-4 text-center font-outfit">Tags</h3>
 
             <form asp-action="Index" method="get">
                 <input type="hidden" name="page" value="@ViewBag.CurrentPage" />
 
                 <select name="tagId"
-                        class="form-select bg-secondary text-light"
+                        class="form-select"
                         onchange="this.form.submit()">
 
                     <option value="">Select a tag</option>
 
-                    @foreach (var tag in ViewBag.Tags)
+                    @foreach (var tag in ViewBag.Tags.Items)
                     {
                         <option value="@tag.Id"
-                                selected="@(Model.TagId == tag.Id)">
+                                selected="@(Model.TagId == tag.Id ? "selected" : null)">
                             @tag.Name
                         </option>
                     }

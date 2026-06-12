@@ -3,11 +3,11 @@ using System.Net.Mail;
 
 namespace TodoListApp.WebApp.Services.Email;
 
-public class EmailService
+public class EmailHandler
 {
     private readonly IConfiguration _config;
 
-    public EmailService(IConfiguration config)
+    public EmailHandler(IConfiguration config)
     {
         _config = config;
     }

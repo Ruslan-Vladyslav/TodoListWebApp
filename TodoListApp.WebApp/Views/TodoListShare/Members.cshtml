@@ -1,0 +1,124 @@
+@model TodoListApp.WebApi.Models.Models.Access.ModelTodoListMembers
+
+@{
+    ViewData["Title"] = "Members";
+    var currentUserId = ViewBag.CurrentUserId as string;
+}
+
+<div class="container mt-4">
+    <div class="mx-auto" style="max-width: 850px;">
+        <h2 class="mb-3 font-outfit fw-bold text-center">
+            Members
+        </h2>
+
+        <div class="glass-card p-4 mb-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-1">@Model.Title</h4>
+
+                <p class="mb-0 text-secondary">
+                    Total members: @Model.Members.Count
+                </p>
+            </div>
+
+            @if (ViewBag.IsOwner == true)
+            {
+                <a asp-action="Share"
+                   asp-route-id="@Model.ListId"
+                   class="btn btn-primary rounded-pill px-4">
+                    <i class="bi bi-person-plus"></i> Invite
+                </a>
+            }
+        </div>
+
+        @if (!Model.Members.Any())
+        {
+            <div class="glass-card text-center p-4 rounded-4">
+                <i class="bi bi-people fs-1 d-block mb-2"></i>
+                <div class="text-secondary">No members found</div>
+            </div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var member in Model.Members)
+                {
+                    bool isYou = member.UserId == currentUserId;
+
+                    <div class="col-12 col-sm-6 col-md-4">
+
+                        <div class="glass-card p-3 h-100 d-flex flex-column justify-content-between">
+
+                            <div class="mb-3">
+                                <div class="fw-semibold d-flex align-items-center gap-2 text-wrap text-break">
+
+                                    @member.UserName
+
+                                    @if (isYou)
+                                    {
+                                        <span class="badge bg-info text-dark">You</span>
+                                    }
+                                </div>
+
+                                <div class="mt-2">
+
+                                    @switch (member.Role)
+                                    {
+                                        case "Owner":
+                                            <span class="badge bg-warning text-dark">Owner</span>
+                                            break;
+
+                                        case "Editor":
+                                            <span class="badge bg-primary">Editor</span>
+                                            break;
+
+                                        default:
+                                            <span class="badge bg-secondary">Viewer</span>
+                                            break;
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center justify-content-end gap-2 mt-auto">
+                                @if (member.Role != "Owner" && Model.OwnerUserId == currentUserId)
+                                {
+                                    <form asp-action="ChangeRole" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="listId" value="@Model.ListId" />
+                                        <input type="hidden" name="userId" value="@member.UserId" />
+                                        <select name="newRole"
+                                                class="form-select form-select-sm rounded-pill"
+                                                style="width: auto; min-width: 100px;"
+                                                onchange="this.form.submit()">
+                                            <option value="Viewer" selected="@(member.Role == "Viewer")">Viewer</option>
+                                            <option value="Editor" selected="@(member.Role == "Editor")">Editor</option>
+                                        </select>
+                                    </form>
+
+                                    <form asp-action="Revoke" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+
+                                        <input type="hidden" name="listId" value="@Model.ListId" />
+                                        <input type="hidden" name="userId" value="@member.UserId" />
+
+                                        <button class="btn btn-outline-danger btn-sm rounded-pill">
+                                            <i class="bi bi-person-x"></i>
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="mt-4">
+            <a asp-controller="TodoList"
+               asp-action="Index"
+               class="btn btn-outline-secondary rounded-pill px-4 w-20">
+                Back
+            </a>
+        </div>
+
+    </div>
+</div>

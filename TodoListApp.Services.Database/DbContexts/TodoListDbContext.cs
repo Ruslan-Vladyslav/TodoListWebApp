@@ -1,10 +1,12 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using TodoListApp.Services.Database.Entities;
 using TodoListApp.Services.Database.Entity;
 
 namespace TodoListApp.Services.Database
 {
-    public class TodoListDbContext : DbContext
+    public class TodoListDbContext : IdentityDbContext<IdentityUser>
     {
         public TodoListDbContext(DbContextOptions<TodoListDbContext> options)
             : base(options)
@@ -19,9 +21,28 @@ namespace TodoListApp.Services.Database
 
         public DbSet<TodoCommentEntity> TodoComments => this.Set<TodoCommentEntity>();
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        public DbSet<TodoListAccessEntity> TodoListAccesses => this.Set<TodoListAccessEntity>();
+
+        public DbSet<TodoInvitationEntity> TodoInvitations => this.Set<TodoInvitationEntity>();
+
+        public DbSet<NotificationEntity> Notifications => this.Set<NotificationEntity>();
+
+        protected override void OnModelCreating(ModelBuilder builder)
         {
-            ArgumentNullException.ThrowIfNull(modelBuilder);
+            base.OnModelCreating(builder);
+
+            _ = builder?.Entity<TodoListAccessEntity>()
+                .HasIndex(x => new { x.TodoListId, x.TargetUserId })
+                .IsUnique();
+
+            _ = builder?.Entity<TodoInvitationEntity>()
+                .HasIndex(x => new { x.TodoListId, x.ReceiverUserId });
+
+            _ = builder?.Entity<TodoTaskEntity>()
+                .HasOne(t => t.TodoList)
+                .WithMany(l => l.TodoTasks)
+                .HasForeignKey(t => t.TodoListId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

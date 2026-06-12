@@ -7,7 +7,7 @@
 <div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-lg-6 col-md-8">
-            <div class="card bg-dark text-light shadow-lg border-0 rounded-4">
+            <div class="glass-card shadow-lg border-0 rounded-4">
                 <div class="card-body p-4">
                     <h2 class="card-title mb-4 text-center">Profile</h2>
 
@@ -17,7 +17,7 @@
                         </div>
 
                         <a asp-action="EditProfile"
-                           class="btn btn-secondary btn-sm fixed-btn">
+                           class="btn btn-secondary btn-sm app-btn">
                             Edit
                         </a>
                     </div>
@@ -34,26 +34,41 @@
                         </div>
 
                         <a asp-action="ChangePassword"
-                           class="btn btn-secondary btn-sm fixed-btn">
+                           class="btn btn-secondary btn-sm app-btn">
                             Change
                         </a>
                     </div>
 
                     <hr class="border-secondary opacity-25" />
 
-                    <div class="d-flex justify-content-between mt-4">
+                    <div class="d-flex justify-content-between align-items-center mt-4">
                         <a asp-controller="Home"
                            asp-action="Index"
-                           class="btn btn-outline-secondary fixed-btn">
+                           class="btn btn-outline-secondary app-btn rounded-pill px-4">
                             Back
                         </a>
 
-                        <form asp-action="Delete" method="post"
-                              onsubmit="return confirm('Are you sure?');">
-                            <button class="btn btn-outline-danger">
-                                <i class="bi bi-trash"></i> Delete Account
-                            </button>
-                        </form>
+                        <div class="d-flex gap-2">
+                            <form asp-controller="Account"
+                                  asp-action="Logout"
+                                  method="post"
+                                  onsubmit="return confirm('Are you sure you want to logout?');">
+
+                                <button type="submit"
+                                        class="btn btn-outline-danger app-btn rounded-pill px-4">
+                                    Logout
+                                </button>
+                            </form>
+
+                            <form asp-action="Delete"
+                                  method="post"
+                                  onsubmit="return confirm('Are you sure?');">
+
+                                <button class="btn btn-outline-danger app-btn rounded-pill px-4">
+                                    <i class="bi bi-trash"></i> Delete Account
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using TodoListApp.Services.Database.Entities;
 using TodoListApp.Services.Interfaces;
+using TodoListApp.WebApi.Models.Enums;
+using TodoListApp.WebApi.Models.Models.Common;
 using TodoListApp.WebApi.Models.Models.TodoTag;
 using TodoListApp.WebApi.Models.Models.TodoTask;
 
@@ -8,32 +10,40 @@ namespace TodoListApp.Services.Database.Services;
 
 public class TodoTagDatabaseService : ITodoTagService
 {
-    private readonly TodoListDbContext context;
+    private readonly TodoListDbContext _context;
+    private readonly IAccessService _accessService;
 
-    public TodoTagDatabaseService(TodoListDbContext context)
+    public TodoTagDatabaseService(TodoListDbContext context, IAccessService accessService)
     {
-        this.context = context;
+        this._context = context;
+        this._accessService = accessService;
     }
 
-    public async Task AddTagToTaskAsync(int taskId, int tagId)
+    public async Task AddTagToTaskAsync(int taskId, int tagId, string userId)
     {
-        var task = await this.context.TodoTasks
+        var task = await this._context.TodoTasks
             .Include(t => t.Tags)
             .FirstOrDefaultAsync(t => t.Id == taskId)
-            ?? throw new KeyNotFoundException($"TodoTask with id {taskId} not found.");
+            ?? throw new KeyNotFoundException($"Task {taskId} not found");
 
-        var tag = await this.context.TodoTags.FindAsync(tagId)
-            ?? throw new KeyNotFoundException($"TodoTag with id {tagId} not found.");
+        var role = await this._accessService.GetUserRoleAsync(userId, task.TodoListId);
 
-        if (task.Tags?.Any(t => t.Id == tag.Id) == true)
+        if (role == null || role == TodoListRole.Viewer)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var tag = await this._context.TodoTags.FindAsync(tagId)
+            ?? throw new KeyNotFoundException($"Tag {tagId} not found");
+
+        if (task.Tags!.Any(t => t.Id == tagId))
         {
             return;
         }
 
-        task.Tags ??= [];
-        task.Tags.Add(tag);
+        task.Tags!.Add(tag);
 
-        _ = await this.context.SaveChangesAsync();
+        await _context.SaveChangesAsync();
     }
 
     public async Task<ModelTodoTag> CreateTagAsync(string tagName)
@@ -43,7 +53,11 @@ public class TodoTagDatabaseService : ITodoTagService
             throw new ArgumentException("Tag name cannot be empty.");
         }
 
-        var existingTag = await this.context.TodoTags.FirstOrDefaultAsync(t => t.Name == tagName);
+        var normalized = tagName.Trim().ToLower();
+
+        var existingTag = await this._context.TodoTags
+            .FirstOrDefaultAsync(t => t.Name!.ToLower() == normalized);
+
         if (existingTag != null)
         {
             return new ModelTodoTag
@@ -53,54 +67,13 @@ public class TodoTagDatabaseService : ITodoTagService
             };
         }
 
-        var tagEntity = new TodoTagEntity
+        var entity = new TodoTagEntity
         {
-            Name = tagName,
+            Name = tagName.Trim()!
         };
 
-        _ = this.context.TodoTags.Add(tagEntity);
-        _ = await this.context.SaveChangesAsync();
-
-        return new ModelTodoTag
-        {
-            Id = tagEntity.Id,
-            Name = tagEntity.Name,
-        };
-    }
-
-    public async Task DeleteTagFromTaskAsync(int taskId, int tagId)
-    {
-        var task = await this.context.TodoTasks
-            .Include(t => t.Tags)
-            .FirstOrDefaultAsync(t => t.Id == taskId)
-            ?? throw new KeyNotFoundException($"TodoTask with id {taskId} not found.");
-
-        var tag = await this.context.TodoTags.FindAsync(tagId)
-            ?? throw new KeyNotFoundException($"TodoTag with id {tagId} not found in task {taskId}.");
-
-        _ = task.Tags!.Remove(tag);
-        _ = await this.context.SaveChangesAsync();
-    }
-
-    public async Task<IEnumerable<ModelTodoTag>> GetAllTagsAsync(int page, int pageSize)
-    {
-        var tags = await this.context.TodoTags
-            .OrderBy(t => t.Name)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
-
-        return tags.Select(t => new ModelTodoTag
-        {
-            Id = t.Id,
-            Name = t.Name,
-        });
-    }
-
-    public async Task<ModelTodoTag?> GetByIdTagAsync(int id)
-    {
-        var entity = await this.context.TodoTags.FindAsync(id)
-            ?? throw new KeyNotFoundException($"TodoTag with id {id} not found.");
+        await _context.TodoTags.AddAsync(entity);
+        await _context.SaveChangesAsync();
 
         return new ModelTodoTag
         {
@@ -109,22 +82,97 @@ public class TodoTagDatabaseService : ITodoTagService
         };
     }
 
-    public async Task<IEnumerable<ModelTodoTask>> GetTasksByTagAsync(int tagId)
+    public async Task DeleteTagFromTaskAsync(int taskId, int tagId, string userId)
     {
-        var tag = await this.context.TodoTags
-            .Include(t => t.TodoTasks)
-            .FirstOrDefaultAsync(t => t.Id == tagId)
-            ?? throw new KeyNotFoundException($"TodoTag with id {tagId} not found.");
+        var task = await this._context.TodoTasks
+            .Include(t => t.Tags)
+            .FirstOrDefaultAsync(t => t.Id == taskId)
+            ?? throw new KeyNotFoundException($"Task {taskId} not found");
 
-        return tag.TodoTasks!.Select(task => new ModelTodoTask
+        var role = await this._accessService.GetUserRoleAsync(userId, task.TodoListId);
+
+        if (role == null || role == TodoListRole.Viewer)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var tagInTask = task.Tags!.FirstOrDefault(t => t.Id == tagId);
+
+        if (tagInTask == null)
+        {
+            return;
+        }
+
+        task.Tags.Remove(tagInTask);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<PagedResponse<ModelTodoTag>> GetAllTagsAsync(int page, int pageSize)
+    {
+        var query = this._context.TodoTags.AsNoTracking();
+
+        var totalCount = await query.CountAsync();
+
+        var tags = await query
+            .OrderBy(t => t.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new PagedResponse<ModelTodoTag>
+        {
+            Items = tags.Select(t => new ModelTodoTag
+            {
+                Id = t.Id,
+                Name = t.Name,
+            }),
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
+    }
+
+    public async Task<ModelTodoTag?> GetByIdTagAsync(int id)
+    {
+        var entity = await this._context.TodoTags
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == id)
+            ?? throw new KeyNotFoundException($"Tag {id} not found");
+
+        return new ModelTodoTag
+        {
+            Id = entity.Id,
+            Name = entity.Name,
+        };
+    }
+
+    public async Task<IEnumerable<ModelTodoTask>> GetTasksByTagAsync(int tagId, string userId)
+    {
+        var tasks = await this._context.TodoTasks
+            .AsNoTracking()
+            .Include(t => t.Tags)
+            .Include(t => t.Comments)
+            .Where(t => t.Tags!.Any(tag => tag.Id == tagId))
+            .Where(t =>
+                this._context.TodoLists.Any(l =>
+                    l.Id == t.TodoListId &&
+                    (
+                        l.UserId == userId ||
+                        this._context.TodoListAccesses.Any(a =>
+                            a.TodoListId == l.Id &&
+                            a.TargetUserId == userId &&
+                            a.Accepted))))
+            .ToListAsync();
+
+        return tasks.Select(task => new ModelTodoTask
         {
             Id = task.Id,
             Title = task.Title,
             Description = task.Description,
             DueDate = task.DueDate,
             CreateDate = task.CreateDate,
-            UserId = task.UserId!,
-            AssignedUserId = task.AssignedUserId,
+            UserId = task.CreatedByUserId,
+            AssignedUserId = task.AssignedToUserId,
             Status = task.Status,
             TodoListId = task.TodoListId,
         });

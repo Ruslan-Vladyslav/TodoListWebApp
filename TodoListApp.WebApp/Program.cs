@@ -1,43 +1,75 @@
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using TodoListApp.Services.Interfaces;
 using TodoListApp.Services.WebApi.Services;
-using Microsoft.EntityFrameworkCore;
-using TodoListApp.Services.Database.DbContexts;
 using TodoListApp.WebApp.Services.Email;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var apiUri = builder.Configuration["WebApi:ApiUri"]!;
+var apiUri = builder.Configuration["WebApi:ApiUri"]
+    ?? throw new InvalidOperationException("WebApi:ApiUri missing");
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<AuthDelegatingHandler>();
 
 builder.Services.AddHttpClient<ITodoListService, TodoListWebApiService>(client =>
 {
     client.BaseAddress = new Uri(apiUri);
-});
+}).AddHttpMessageHandler<AuthDelegatingHandler>();
 
 
 builder.Services.AddHttpClient<ITodoTaskService, TodoTaskWebApiService>(client =>
 {
     client.BaseAddress = new Uri(apiUri);
-});
+}).AddHttpMessageHandler<AuthDelegatingHandler>();
 
 builder.Services.AddHttpClient<ITodoTagService, TodoTagWebApiService>(client =>
 {
     client.BaseAddress = new Uri(apiUri);
-});
+}).AddHttpMessageHandler<AuthDelegatingHandler>();
 
 builder.Services.AddHttpClient<ITodoCommentService, TodoCommentWebApiService>(client =>
 {
     client.BaseAddress = new Uri(apiUri);
+}).AddHttpMessageHandler<AuthDelegatingHandler>();
+
+builder.Services.AddHttpClient<IAccessService, AccessWebApiService>(client =>
+{
+    client.BaseAddress = new Uri(apiUri);
+}).AddHttpMessageHandler<AuthDelegatingHandler>();
+
+builder.Services.AddHttpClient<IInvitationService, InvitationWebApiService>(client =>
+{
+    client.BaseAddress = new Uri(apiUri);
+}).AddHttpMessageHandler<AuthDelegatingHandler>();
+
+builder.Services.AddHttpClient<INotificationService, NotificationWebApiService>(client =>
+{
+    client.BaseAddress = new Uri(apiUri);
+}).AddHttpMessageHandler<AuthDelegatingHandler>();
+
+builder.Services.AddHttpClient<IUserService, UserWebApiService>(client =>
+{
+    client.BaseAddress = new Uri(apiUri);
+})
+.AddHttpMessageHandler<AuthDelegatingHandler>();
+
+builder.Services.AddHttpClient<IAuthService, AuthWebApiService>(client =>
+{
+    client.BaseAddress = new Uri(apiUri);
+})
+.AddHttpMessageHandler<AuthDelegatingHandler>();
+
+
+builder.Services.AddScoped<EmailHandler>();
+
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+.AddCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.AccessDeniedPath = "/Account/Login";
 });
-
-builder.Services.AddDbContext<IdentityDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("IdentityConnection")));
-
-builder.Services.AddIdentity<IdentityUser, IdentityRole>()
-    .AddEntityFrameworkStores<IdentityDbContext>()
-    .AddDefaultTokenProviders();
-
-builder.Services.AddScoped<EmailService>();
+builder.Services.AddAuthorization();
 
 builder.Services.AddControllersWithViews();
 
@@ -57,6 +89,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
+app.MapControllers();
 
 app.MapControllerRoute(
     name: "default",

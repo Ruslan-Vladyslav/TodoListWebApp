@@ -1,51 +1,62 @@
+@using TodoListApp.WebApi.Models.Enums
 @model TodoListApp.WebApi.Models.Models.TodoTask.CreateTodoTask
 
 @{
     ViewData["Title"] = "Create Task";
+    var role = ViewBag.Role as TodoListRole?;
 }
 
-<div class="row justify-content-center">
+<div class="row justify-content-center mt-4">
     <div class="col-md-6">
-        <h1 class="text-dark mb-4">Create Task</h1>
+        <h1 class="font-outfit fw-bold mb-4">Create Task</h1>
 
-        <div class="bg-dark p-4 rounded shadow-sm">
-            <form asp-action="Create" method="post" class="text-light">
+        <div class="glass-card p-4 rounded shadow-sm">
+            <form asp-action="Create" method="post">
                 @Html.AntiForgeryToken()
                 <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
                 <div class="mb-3">
                     <label asp-for="Title" class="form-label"></label>
-                    <input asp-for="Title" class="form-control bg-secondary text-light" />
-                    <span asp-validation-for="Title" class="text-danger"></span>
+                    <input asp-for="Title" class="form-control" />
+                    <span asp-validation-for="Title" class="text-danger validation-message"></span>
                 </div>
 
                 <div class="mb-3">
                     <label asp-for="Description" class="form-label"></label>
-                    <textarea asp-for="Description" class="form-control bg-secondary text-light"></textarea>
-                    <span asp-validation-for="Description" class="text-danger"></span>
+                    <textarea asp-for="Description"
+                              class="form-control"
+                              rows="3"></textarea>
+                    <span asp-validation-for="Description" class="text-danger validation-message"></span>
                 </div>
 
                 <div class="mb-3">
                     <label asp-for="TodoListId" class="form-label">Select ToDo List</label>
-                    <select asp-for="TodoListId" asp-items="ViewBag.TodoLists"
-                            class="form-control bg-secondary text-light">
-                        <option value="">-- Choose a list --</option>
-                    </select>
-                    <span asp-validation-for="TodoListId" class="text-danger"></span>
+                    @if (role is null or TodoListRole.Owner)
+                    {
+                        <select asp-for="TodoListId"
+                                asp-items="ViewBag.ToDoLists"
+                                class="form-select">
+                            <option value="">-- Choose a list --</option>
+                        </select>
+                    }
+                    else
+                    {
+                        <input type="hidden" asp-for="TodoListId" />
+
+                        <input value="@(((SelectList)ViewBag.ToDoLists)
+                            .FirstOrDefault(x => x.Value == Model.TodoListId.ToString())?.Text)"
+                               class="form-control"
+                               readonly />
+                    }
+                    <span asp-validation-for="TodoListId" class="text-danger validation-placeholder"></span>
                 </div>
 
-                <div class="mb-3">
-                    <label asp-for="DueDate" class="form-label"></label>
-                    <input asp-for="DueDate"
-                           type="datetime-local"
-                           class="form-control bg-secondary text-light border-0"
-                           value="@Model.DueDate.ToString("yyyy-MM-ddTHH:mm")" />
-                    <span asp-validation-for="DueDate" class="text-danger"></span>
-                </div>
+                <input asp-for="DueDate" class="dueDateHidden" type="hidden" />
+                @await Html.PartialAsync("_DateTimePicker", Model.DueDate)
 
                 <div class="d-flex justify-content-between mt-3">
-                    <input type="submit" value="Create Task" class="btn btn-primary" />
-                    <a asp-action="Index" class="btn btn-secondary">Back to Tasks</a>
+                    <input type="submit" value="Create Task" class="btn btn-primary rounded-pill px-4" />
+                    <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">Back to Tasks</a>
                 </div>
             </form>
         </div>
